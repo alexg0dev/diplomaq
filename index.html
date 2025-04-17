@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Debataly - Global Debate Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1f1d79;
+      --primary-light: #a5bcda;
+      --secondary: #ff6309;
+      --secondary-light: #ff7c30;
+      --accent: #c75495;
+      --bg-cream: #fdfbf6;
+      --text-dark: #454545;
+    }
+    
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #edf6e3;
+      color: var(--text-dark);
+    }
+    
+    .gradient-bg {
+      background: linear-gradient(135deg, #1f1d79 0%, #005791 100%);
+    }
+    
+    .gradient-text {
+      background: linear-gradient(90deg, #1f1d79 0%, #c75495 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .gradient-button {
+      background: linear-gradient(90deg, #ff6309 0%, #ff7c30 100%);
+      transition: all 0.3s ease;
+    }
+    
+    .gradient-button:hover {
+      background: linear-gradient(90deg, #e86a00 0%, #f16a30 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(255, 99, 9, 0.2);
+    }
+    
+    .card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+    }
+    
+    .blob-shape {
+      border-radius: 71% 29% 41% 59% / 59% 43% 57% 41%;
+    }
+    
+    .chat-message {
+      animation: fadeIn 0.3s;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .typing-indicator span {
+      animation: blink 1.4s infinite both;
+    }
+    
+    .typing-indicator span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+    
+    .typing-indicator span:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+    
+    @keyframes blink {
+      0% { opacity: 0.1; }
+      20% { opacity: 1; }
+      100% { opacity: 0.1; }
+    }
+    
+    .country-flag {
+      font-size: 1.5rem;
+      margin-right: 0.5rem;
+    }
+    
+    .debate-topic-tag {
+      background-color: #d0d6ef;
+      color: #11143f;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    
+    .auth-form input {
+      background-color: #ffffff;
+      border: 1px solid #e0e0e0;
+      border-radius: 0.5rem;
+      padding: 0.75rem 1rem;
+      width: 100%;
+      margin-bottom: 1rem;
+      transition: border-color 0.3s ease;
+    }
+    
+    .auth-form input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(31, 29, 121, 0.1);
+    }
+    
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: #b6b3d9;
+      border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: #a6c0e3;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="bg-white shadow-md sticky top-0 z-50">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center space-x-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40" fill="none">
+            <path d="M20 5C11.7157 5 5 11.7157 5 20C5 28.2843 11.7157 35 20 35C28.2843 35 35 28.2843 35 20C35 11.7157 28.2843 5 20 5Z" fill="#1f1d79"/>
+            <path d="M15 15C15 13.3431 16.3431 12 18 12H22C23.6569 12 25 13.3431 25 15V25C25 26.6569 23.6569 28 22 28H18C16.3431 28 15 26.6569 15 25V15Z" fill="white"/>
+            <path d="M12 18C12 16.8954 12.8954 16 14 16C15.1046 16 16 16.8954 16 18V22C16 23.1046 15.1046 24 14 24C12.8954 24 12 23.1046 12 22V18Z" fill="white"/>
+            <path d="M24 18C24 16.8954 24.8954 16 26 16C27.1046 16 28 16.8954 28 18V22C28 23.1046 27.1046 24 26 24C24.8954 24 24 23.1046 24 22V18Z" fill="white"/>
+          </svg>
+          <h1 class="text-2xl font-bold text-[#1f1d79]">Debataly</h1>
+        </div>
+        <div class="hidden md:flex space-x-8">
+          <a href="#features" class="text-gray-600 hover:text-[#1f1d79] transition">Features</a>
+          <a href="#debates" class="text-gray-600 hover:text-[#1f1d79] transition">Debates</a>
+          <a href="#mun" class="text-gray-600 hover:text-[#1f1d79] transition">MUN</a>
+          <a href="#learning" class="text-gray-600 hover:text-[#1f1d79] transition">Learning</a>
+        </div>
+        <div id="nav-buttons">
+          <button id="login-nav-btn" class="bg-white text-[#1f1d79] border border-[#1f1d79] px-4 py-2 rounded-lg transition hover:bg-[#e9e7fc]">Login</button>
+          <button id="register-nav-btn" class="gradient-button text-white px-4 py-2 rounded-lg ml-2">Register</button>
+        </div>
+        <div id="user-nav" class="hidden">
+          <span id="welcome-user" class="mr-4 text-[#1f1d79]">Welcome, User</span>
+          <button id="logout-btn" class="bg-white text-red-600 border border-red-600 px-4 py-2 rounded-lg transition hover:bg-red-50">Logout</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main>
+    <!-- Hero Section -->
+    <section class="py-16 md:py-24 px-4 relative overflow-hidden">
+      <div class="absolute top-0 right-0 w-1/2 h-full bg-[#e9e7fc] blob-shape -z-10 transform translate-x-1/4"></div>
+      <div class="container mx-auto max-w-6xl">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+          <div>
+            <h1 class="text-4xl md:text-5xl font-bold mb-6">
+              <span class="gradient-text">Global Debates</span>
+              <br>
+              <span class="text-[#454545]">at Your Fingertips</span>
+            </h1>
+            <p class="text-lg text-gray-600 mb-8">Join multiplayer debates, simulate Model UN sessions, and develop your persuasion skills on the world's most engaging debate platform.</p>
+            <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+              <button id="get-started-btn" class="gradient-button text-white px-8 py-3 rounded-lg text-lg font-semibold">Get Started</button>
+              <button id="learn-more-btn" class="bg-white text-[#1f1d79] border border-[#1f1d79] px-8 py-3 rounded-lg text-lg font-semibold transition hover:bg-[#e9e7fc]">Learn More</button>
+            </div>
+          </div>
+          <div class="relative">
+            <img src="/placeholder.svg?height=400&width=500" alt="Debate illustration" class="w-full h-auto rounded-lg shadow-xl">
+            <div class="absolute -bottom-6 -left-6 bg-white p-4 rounded-lg shadow-lg">
+              <div class="flex items-center">
+                <span class="text-3xl">🇺🇸</span>
+                <span class="text-3xl ml-4">🇨🇳</span>
+                <span class="text-3xl ml-4">🇷🇺</span>
+              </div>
+              <p class="mt-2 font-medium text-[#1f1d79]">100+ Countries to Represent</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-16 bg-white">
+      <div class="container mx-auto max-w-6xl px-4">
+        <h2 class="text-3xl font-bold text-center mb-12">
+          <span class="gradient-text">Platform Features</span>
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div class="card bg-[#fdfbf6] p-6 rounded-xl shadow-md">
+            <div class="w-14 h-14 bg-[#e9e7fc] rounded-full flex items-center justify-center mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-[#1f1d79]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+              </svg>
+            </div>
+            <h3 class="text-xl font-semibold mb-3 text-[#1f1d79]">Political Debates</h3>
+            <p class="text-gray-600">Engage in real-time political debates with users from around the world. Create your own topics or join existing discussions.</p>
+            <ul class="mt-4 space-y-2 text-gray-600">
+              <li class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#ff6309] mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                1v1 or group debates
+              </li>
+              <li class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#ff6309] mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                Timed sessions with phases
+              </li>
+              <li class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#ff6309] mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                Audience voting
+              </li>
+            </ul>
+          </div>
+          
+          <div class="card bg-[#fdfbf6] p-6 rounded-xl shadow-md">
+            <div class="w-14 h-14 bg-[#ffc7e8] rounded-full flex items-center justify-center mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-[#c75495]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 class="text-xl font-semibold mb-3 text-[#c75495]">Model UN Simulation</h3>
+            <p class="text-gray-600">Experience authentic Model United Nations debates. Represent countries, form alliances, and solve global challenges.</p>
+            <ul class="mt-4 space-y-2 text-gray-600">
+              <li class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#c75495] mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                Multiple councils (UNSC, WHO, etc.)
+              </li>
+              <li class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#c75495] mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                100+ countries with detailed profiles
+              </li>
+              <li class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#c75495] mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                Rapid or scheduled sessions
+              </li>
+            </ul>
+          </div>
+          
+          <div class="card bg-[#fdfbf6] p-6 rounded-xl shadow-md">
+            <div class="w-14 h-14 bg-[#d2e3f7] rounded-full flex items-center justify-center mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-[#005791]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+            </div>
+            <h3 class="text-xl font-semibold mb-3 text-[#005791]">Learning Center</h3>
+            <p class="text-gray-600">Improve your debate skills with our comprehensive learning resources on various global topics.</p>
+            <ul class="mt-4 space-y-2 text-gray-600">
+              <li class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#005791] mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                Topic summaries and key points
+              </li>
+              <li class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#005791] mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                Famous debate analyses
+              </li>
+              <li class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#005791] mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                Argument frameworks and resources
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Debates Preview Section -->
+    <section id="debates" class="py-16 bg-[#edf6e3]">
+      <div class="container mx-auto max-w-6xl px-4">
+        <h2 class="text-3xl font-bold text-center mb-4">
+          <span class="gradient-text">Live Debates</span>
+        </h2>
+        <p class="text-center text-gray-600 mb-12 max-w-3xl mx-auto">Join ongoing debates or start your own. Engage with users from around the world on topics that matter.</p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- Debate Card 1 -->
+          <div class="card bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="p-1 bg-gradient-to-r from-[#1f1d79] to-[#c75495]"></div>
+            <div class="p-6">
+              <div class="flex justify-between items-start mb-4">
+                <h3 class="font-bold text-lg text-[#1f1d79]">Climate Action Resolution</h3>
+                <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">Live</span>
+              </div>
+              <div class="flex items-center mb-3">
+                <span class="debate-topic-tag">Climate</span>
+                <span class="text-xs text-gray-500 ml-3">8 participants</span>
+              </div>
+              <p class="text-gray-600 text-sm mb-4">Discussing the security implications of climate change, including resource scarcity and conflict.</p>
+              <div class="flex justify-between items-center">
+                <div class="flex">
+                  <span class="text-2xl">🇺🇸</span>
+                  <span class="text-2xl ml-1">🇨🇳</span>
+                  <span class="text-2xl ml-1">🇮🇳</span>
+                </div>
+                <button class="login-required bg-[#1f1d79] text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition">Join</button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Debate Card 2 -->
+          <div class="card bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="p-1 bg-gradient-to-r from-[#ff6309] to-[#ff7c30]"></div>
+            <div class="p-6">
+              <div class="flex justify-between items-start mb-4">
+                <h3 class="font-bold text-lg text-[#1f1d79]">Nuclear Disarmament Treaty</h3>
+                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">Scheduled</span>
+              </div>
+              <div class="flex items-center mb-3">
+                <span class="debate-topic-tag">Security</span>
+                <span class="text-xs text-gray-500 ml-3">5 participants</span>
+              </div>
+              <p class="text-gray-600 text-sm mb-4">Addressing challenges to the non-proliferation regime and disarmament efforts.</p>
+              <div class="flex justify-between items-center">
+                <div class="flex">
+                  <span class="text-2xl">🇷🇺</span>
+                  <span class="text-2xl ml-1">🇬🇧</span>
+                  <span class="text-2xl ml-1">🇫🇷</span>
+                </div>
+                <button class="login-required bg-[#1f1d79] text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition">Register</button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Debate Card 3 -->
+          <div class="card bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="p-1 bg-gradient-to-r from-[#c75495] to-[#ffc7e8]"></div>
+            <div class="p-6">
+              <div class="flex justify-between items-start mb-4">
+                <h3 class="font-bold text-lg text-[#1f1d79]">AI Ethics Framework</h3>
+                <span class="bg-gray-100 text-gray-800 px-2 py-1 rounded-full text-xs font-medium">Finished</span>
+              </div>
+              <div class="flex items-center mb-3">
+                <span class="debate-topic-tag">Technology</span>
+                <span class="text-xs text-gray-500 ml-3">12 participants</span>
+              </div>
+              <p class="text-gray-600 text-sm mb-4">Examining international norms for AI development and ethical considerations.</p>
+              <div class="flex justify-between items-center">
+                <div class="flex">
+                  <span class="text-2xl">🇯🇵</span>
+                  <span class="text-2xl ml-1">🇩🇪</span>
+                  <span class="text-2xl ml-1">🇰🇷</span>
+                </div>
+                <button class="login-required bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition">Watch</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="text-center mt-10">
+          <button id="view-all-debates" class="login-required bg-white text-[#1f1d79] border border-[#1f1d79] px-6 py-3 rounded-lg font-semibold transition hover:bg-[#e9e7fc]">View All Debates</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- MUN Section -->
+    <section id="mun" class="py-16 bg-white relative overflow-hidden">
+      <div class="absolute top-0 left-0 w-1/3 h-full bg-[#d0d6ef] blob-shape -z-10 transform -translate-x-1/3"></div>
+      <div class="container mx-auto max-w-6xl px-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+          <div>
+            <h2 class="text-3xl font-bold mb-6">
+              <span class="gradient-text">Model UN Simulation</span>
+            </h2>
+            <p class="text-gray-600 mb-6">Experience the dynamics of international diplomacy through our realistic Model United Nations simulation. Represent countries, debate global issues, and forge diplomatic solutions.</p>
+            
+            <div class="space-y-4 mb-8">
+              <div class="flex items-start">
+                <div class="w-10 h-10 rounded-full bg-[#e9e7fc] flex items-center justify-center mt-1 mr-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#1f1d79]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="font-semibold text-[#1f1d79]">Multiple Councils</h3>
+                  <p class="text-gray-600 text-sm">Choose from UNSC, UNHRC, WHO, ECOSOC, and more. Each with unique topics and dynamics.</p>
+                </div>
+              </div>
+              
+              <div class="flex items-start">
+                <div class="w-10 h-10 rounded-full bg-[#ffc7e8] flex items-center justify-center mt-1 mr-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#c75495]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="font-semibold text-[#c75495]">Flexible Session Formats</h3>
+                  <p class="text-gray-600 text-sm">Choose between rapid matches for immediate debates or scheduled sessions with preparation time.</p>
+                </div>
+              </div>
+              
+              <div class="flex items-start">
+                <div class="w-10 h-10 rounded-full bg-[#d2e3f7] flex items-center justify-center mt-1 mr-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#005791]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="font-semibold text-[#005791]">Authentic Country Profiles</h3>
+                  <p class="text-gray-600 text-sm">Each country comes with detailed background, key issues, and diplomatic relations to guide your representation.</p>
+                </div>
+              </div>
+            </div>
+            
+            <button id="try-mun-btn" class="login-required gradient-button text-white px-6 py-3 rounded-lg font-semibold">Try MUN Simulation</button>
+          </div>
+          
+          <div class="relative">
+            <img src="/placeholder.svg?height=400&width=500" alt="MUN simulation" class="w-full h-auto rounded-lg shadow-xl">
+            <div class="absolute -top-6 -right-6 bg-white p-4 rounded-lg shadow-lg">
+              <div class="flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-[#1f1d79]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                </svg>
+              </div>
+              <p class="mt-2 font-medium text-center text-[#1f1d79]">Global Participation</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Learning Center Preview -->
+    <section id="learning" class="py-16 bg-[#edf6e3]">
+      <div class="container mx-auto max-w-6xl px-4">
+        <h2 class="text-3xl font-bold text-center mb-4">
+          <span class="gradient-text">Learning Center</span>
+        </h2>
+        <p class="text-center text-gray-600 mb-12 max-w-3xl mx-auto">Enhance your debate skills with our comprehensive resources on global topics and effective argumentation.</p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <!-- Topic Card 1 -->
+          <div class="card bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="h-40 bg-gradient-to-r from-[#1f1d79] to-[#005791] flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+              </svg>
+            </div>
+            <div class="p-6">
+              <h3 class="font-bold text-lg text-[#1f1d79] mb-3">Climate Change</h3>
+              <p class="text-gray-600 text-sm mb-4">Explore the scientific consensus, policy debates, and international agreements on climate change.</p>
+              <div class="flex flex-wrap gap-2 mb-4">
+                <span class="bg-[#e9e7fc] text-[#1f1d79] px-2 py-1 rounded-full text-xs">Paris Agreement</span>
+                <span class="bg-[#e9e7fc] text-[#1f1d79] px-2 py-1 rounded-full text-xs">Carbon Pricing</span>
+                <span class="bg-[#e9e7fc] text-[#1f1d79] px-2 py-1 rounded-full text-xs">Adaptation</span>
+              </div>
+              <button class="login-required w-full bg-[#1f1d79] text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition">View Resources</button>
+            </div>
+          </div>
+          
+          <!-- Topic Card 2 -->
+          <div class="card bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="h-40 bg-gradient-to-r from-[#ff6309] to-[#ff7c30] flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <div class="p-6">
+              <h3 class="font-bold text-lg text-[#1f1d79] mb-3">Cybersecurity</h3>
+              <p class="text-gray-600 text-sm mb-4">Understand international norms for state behavior in cyberspace and responses to cyber attacks.</p>
+              <div class="flex flex-wrap gap-2 mb-4">
+                <span class="bg-[#ffa073] text-[#554644] px-2 py-1 rounded-full text-xs">Digital Sovereignty</span>
+                <span class="bg-[#ffa073] text-[#554644] px-2 py-1 rounded-full text-xs">Cyber Warfare</span>
+                <span class="bg-[#ffa073] text-[#554644] px-2 py-1 rounded-full text-xs">Privacy</span>
+              </div>
+              <button class="login-required w-full bg-[#ff6309] text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition">View Resources</button>
+            </div>
+          </div>
+          
+          <!-- Topic Card 3 -->
+          <div class="card bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="h-40 bg-gradient-to-r from-[#c75495] to-[#ffc7e8] flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            <div class="p-6">
+              <h3 class="font-bold text-lg text-[#1f1d79] mb-3">Human Rights</h3>
+              <p class="text-gray-600 text-sm mb-4">Explore the evolution of human rights frameworks, enforcement mechanisms, and current challenges.</p>
+              <div class="flex flex-wrap gap-2 mb-4">
+                <span class="bg-[#ffc7e8] text-[#c75495] px-2 py-1 rounded-full text-xs">Universal Declaration</span>
+                <span class="bg-[#ffc7e8] text-[#c75495] px-2 py-1 rounded-full text-xs">Refugee Rights</span>
+                <span class="bg-[#ffc7e8] text-[#c75495] px-2 py-1 rounded-full text-xs">ICC</span>
+              </div>
+              <button class="login-required w-full bg-[#c75495] text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition">View Resources</button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="text-center mt-10">
+          <button id="explore-topics" class="login-required bg-white text-[#1f1d79] border border-[#1f1d79] px-6 py-3 rounded-lg font-semibold transition hover:bg-[#e9e7fc]">Explore All Topics</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-16 bg-gradient-to-r from-[#1f1d79] to-[#005791] text-white">
+      <div class="container mx-auto max-w-6xl px-4 text-center">
+        <h2 class="text-3xl font-bold mb-6">Ready to Join the Debate?</h2>
+        <p class="text-lg mb-8 max-w-2xl mx-auto">Create your account now to access all features, join debates, and connect with a global community of debaters.</p>
+        <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+          <button id="cta-register-btn" class="gradient-button text-white px-8 py-3 rounded-lg text-lg font-semibold">Register Now</button>
+          <button id="cta-login-btn" class="bg-white text-[#1f1d79] px-8 py-3 rounded-lg text-lg font-semibold transition hover:bg-opacity-90">Login</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Auth Modal -->
+    <div id="auth-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+      <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
+        <div class="p-6">
+          <div class="flex justify-between items-center mb-6">
+            <h2 id="auth-modal-title" class="text-2xl font-bold text-[#1f1d79]">Login</h2>
+            <button id="close-auth-modal" class="text-gray-500 hover:text-gray-700">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <div id="login-form-container" class="auth-form">
+            <form id="login-form">
+              <div class="mb-4">
+                <label for="login-username" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                <input type="text" id="login-username" placeholder="Enter your username" required>
+              </div>
+              <div class="mb-6">
+                <label for="login-password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <input type="password" id="login-password" placeholder="Enter your password" required>
+              </div>
+              <button type="submit" class="w-full gradient-button text-white py-3 rounded-lg font-semibold">Login</button>
+            </form>
+            <div class="mt-4 text-center">
+              <p class="text-sm text-gray-600">Don't have an account? <a href="#" id="switch-to-register" class="text-[#1f1d79] hover:underline">Register</a></p>
+            </div>
+          </div>
+          
+          <div id="register-form-container" class="auth-form hidden">
+            <form id="register-form">
+              <div class="mb-4">
+                <label for="register-username" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                <input type="text" id="register-username" placeholder="Choose a username" required>
+              </div>
+              <div class="mb-4">
+                <label for="register-email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input type="email" id="register-email" placeholder="Enter your email" required>
+              </div>
+              <div class="mb-6">
+                <label for="register-password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <input type="password" id="register-password" placeholder="Create a password" required>
+              </div>
+              <button type="submit" class="w-full gradient-button text-white py-3 rounded-lg font-semibold">Register</button>
+            </form>
+            <div class="mt-4 text-center">
+              <p class="text-sm text-gray-600">Already have an account? <a href="#" id="switch-to-login" class="text-[#1f1d79] hover:underline">Login</a></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-[#11143f] text-white py-12">
+    <div class="container mx-auto max-w-6xl px-4">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div>
+          <div class="flex items-center space-x-2 mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 40 40" fill="none">
+              <path d="M20 5C11.7157 5 5 11.7157 5 20C5 28.2843 11.7157 35 20 35C28.2843 35 35 28.2843 35 20C35 11.7157 28.2843 5 20 5Z" fill="#ffffff"/>
+              <path d="M15 15C15 13.3431 16.3431 12 18 12H22C23.6569 12 25 13.3431 25 15V25C25 26.6569 23.6569 28 22 28H18C16.3431 28 15 26.6569 15 25V15Z" fill="#11143f"/>
+              <path d="M12 18C12 16.8954 12.8954 16 14 16C15.1046 16 16 16.8954 16 18V22C16 23.1046 15.1046 24 14 24C12.8954 24 12 23.1046 12 22V18Z" fill="#11143f"/>
+              <path d="M24 18C24 16.8954 24.8954 16 26 16C27.1046 16 28 16.8954 28 18V22C28 23.1046 27.1046 24 26 24C24.8954 24 24 23.1046 24 22V18Z" fill="#11143f"/>
+            </svg>
+            <h3 class="text-xl font-bold">Debataly</h3>
+          </div>
+          <p class="text-gray-400 mb-4">The global platform for multiplayer debates and Model UN simulations.</p>
+          <div class="flex space-x-4">
+            <a href="#" class="text-gray-400 hover:text-white transition">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/>
+              </svg>
+            </a>
+            <a href="#" class="text-gray-400 hover:text-white transition">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+              </svg>
+            </a>
+            <a href="#" class="text-gray-400 hover:text-white transition">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+        
+        <div>
+          <h4 class="text-lg font-semibold mb-4">Features</h4>
+          <ul class="space-y-2">
+            <li><a href="#debates" class="text-gray-400 hover:text-white transition">Political Debates</a></li>
+            <li><a href="#mun" class="text-gray-400 hover:text-white transition">Model UN Simulation</a></li>
+            <li><a href="#learning" class="text-gray-400 hover:text-white transition">Learning Center</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition">User Profiles</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition">Debate History</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h4 class="text-lg font-semibold mb-4">Resources</h4>
+          <ul class="space-y-2">
+            <li><a href="#" class="text-gray-400 hover:text-white transition">Help Center</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition">Community Guidelines</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition">API Documentation</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition">Status</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition">Blog</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h4 class="text-lg font-semibold mb-4">Company</h4>
+          <ul class="space-y-2">
+            <li><a href="#" class="text-gray-400 hover:text-white transition">About Us</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition">Careers</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition">Privacy Policy</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition">Terms of Service</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition">Contact Us</a></li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="mt-12 pt-8 border-t border-gray-800 text-center text-gray-400 text-sm">
+        <p>&copy; 2025 Debataly. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="backend.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Auth modal functionality
+      const authModal = document.getElementById('auth-modal');
+      const authModalTitle = document.getElementById('auth-modal-title');
+      const loginFormContainer = document.getElementById('login-form-container');
+      const registerFormContainer = document.getElementById('register-form-container');
+      
+      // Open auth modal
+      function openAuthModal(type = 'login') {
+        authModal.classList.remove('hidden');
+        if (type === 'login') {
+          authModalTitle.textContent = 'Login';
+          loginFormContainer.classList.remove('hidden');
+          registerFormContainer.classList.add('hidden');
+        } else {
+          authModalTitle.textContent = 'Register';
+          registerFormContainer.classList.remove('hidden');
+          loginFormContainer.classList.add('hidden');
+        }
+      }
+      
+      // Close auth modal
+      function closeAuthModal() {
+        authModal.classList.add('hidden');
+      }
+      
+      // Toggle between login and register forms
+      document.getElementById('switch-to-register').addEventListener('click', function(e) {
+        e.preventDefault();
+        openAuthModal('register');
+      });
+      
+      document.getElementById('switch-to-login').addEventListener('click', function(e) {
+        e.preventDefault();
+        openAuthModal('login');
+      });
+      
+      // Open auth modal buttons
+      document.getElementById('login-nav-btn').addEventListener('click', function() {
+        openAuthModal('login');
+      });
+      
+      document.getElementById('register-nav-btn').addEventListener('click', function() {
+        openAuthModal('register');
+      });
+      
+      document.getElementById('cta-login-btn').addEventListener('click', function() {
+        openAuthModal('login');
+      });
+      
+      document.getElementById('cta-register-btn').addEventListener('click', function() {
+        openAuthModal('register');
+      });
+      
+      // Close auth modal
+      document.getElementById('close-auth-modal').addEventListener('click', closeAuthModal);
+      
+      // Close modal when clicking outside
+      authModal.addEventListener('click', function(e) {
+        if (e.target === authModal) {
+          closeAuthModal();
+        }
+      });
+      
+      // Login required buttons
+      document.querySelectorAll('.login-required').forEach(button => {
+        button.addEventListener('click', function() {
+          openAuthModal('login');
+        });
+      });
+      
+      // Form submissions
+      document.getElementById('login-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        // In a real app, this would authenticate with a server
+        const username = document.getElementById('login-username').value;
+        if (username) {
+          // Update UI after login
+          document.getElementById('nav-buttons').classList.add('hidden');
+          document.getElementById('user-nav').classList.remove('hidden');
+          document.getElementById('welcome-user').textContent = `Welcome, ${username}`;
+          closeAuthModal();
+        }
+      });
+      
+      document.getElementById('register-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        // In a real app, this would register with a server
+        const username = document.getElementById('register-username').value;
+        if (username) {
+          // Update UI after registration
+          document.getElementById('nav-buttons').classList.add('hidden');
+          document.getElementById('user-nav').classList.remove('hidden');
+          document.getElementById('welcome-user').textContent = `Welcome, ${username}`;
+          closeAuthModal();
+        }
+      });
+      
+      // Logout functionality
+      document.getElementById('logout-btn').addEventListener('click', function() {
+        // Reset UI after logout
+        document.getElementById('user-nav').classList.add('hidden');
+        document.getElementById('nav-buttons').classList.remove('hidden');
+      });
+    });
+  </script>
+</body>
+</html>

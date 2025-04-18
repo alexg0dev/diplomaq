@@ -39,11 +39,15 @@ const JWT_SECRET = "diplomaq-secret-key" // Replace with a strong secret in prod
 const REDIRECT_URI = "https://diplomaq-production.up.railway.app/api/auth/callback/google"
 const FRONTEND_URL = "https://diplomaq-production.up.railway.app"
 
+// Initialize Google OAuth2 client
+const googleClient = new OAuth2Client({
+  clientId: GOOGLE_CLIENT_ID,
+  clientSecret: GOOGLE_CLIENT_SECRET,
+  redirectUri: REDIRECT_URI,
+})
+
 // Admin emails with ban permissions
 const ADMIN_EMAILS = ["alexandroghanem@gmail.com", "alexandroghanem1@gmail.com"]
-
-// Initialize Google OAuth2 client
-const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, REDIRECT_URI)
 
 // Initialize Pusher
 const pusher = new Pusher({
@@ -427,6 +431,7 @@ app.get("/api/auth/google", (req, res) => {
     scope: ["profile", "email"],
     prompt: "consent",
     redirect_uri: REDIRECT_URI,
+    include_granted_scopes: true,
   })
 
   console.log("Redirecting to Google auth URL:", authUrl)
@@ -435,8 +440,13 @@ app.get("/api/auth/google", (req, res) => {
 
 // Google OAuth callback endpoint
 app.get("/api/auth/callback/google", async (req, res) => {
-  const { code } = req.query
+  const { code, error } = req.query
   console.log("Received callback from Google with code:", code ? "Code received" : "No code")
+
+  if (error) {
+    console.error("Error returned from Google OAuth:", error)
+    return res.redirect(`${FRONTEND_URL}/signin.html?error=${error}`)
+  }
 
   // Get the redirect URL from cookie
   const redirectUrl = req.cookies.auth_redirect || `${FRONTEND_URL}/index.html`

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Account Suspended - Diplomaq.lol</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1f1d79;
+      --primary-light: #a5bcda;
+      --secondary: #ff6309;
+      --secondary-light: #ff7c30;
+      --accent: #c75495;
+      --bg-cream: #fdfbf6;
+      --text-dark: #454545;
+    }
+    
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: #f0f4fc;
+      color: var(--text-dark);
+      overflow-x: hidden;
+    }
+    
+    .gradient-bg {
+      background: linear-gradient(135deg, #1f1d79 0%, #005791 100%);
+    }
+  </style>
+</head>
+<body>
+  <div class="min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
+      <div class="text-center mb-8">
+        <div class="flex items-center justify-center mb-4">
+          <div class="relative">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="24" cy="24" r="18" fill="#1f1d79"/>
+              <path d="M24 6C14.0589 6 6 14.0589 6 24C6 33.9411 14.0589 42 24 42C33.9411 42 42 33.9411 42 24C42 14.0589 33.9411 6 24 6Z" fill="#1f1d79"/>
+              <path d="M18 18C18 16.0117 19.6117 14.4 21.6 14.4H26.4C28.3883 14.4 30 16.0117 30 18V30C30 31.9883 28.3883 33.6 26.4 33.6H21.6C19.6117 33.6 18 31.9883 18 30V18Z" fill="white"/>
+              <path d="M14.4 21.6C14.4 20.2745 15.4745 19.2 16.8 19.2C18.1255 19.2 19.2 20.2745 19.2 21.6V26.4C19.2 27.7255 18.1255 28.8 16.8 28.8C15.4745 28.8 14.4 27.7255 14.4 26.4V21.6Z" fill="white"/>
+              <path d="M28.8 21.6C28.8 20.2745 29.8745 19.2 31.2 19.2C32.5255 19.2 33.6 20.2745 33.6 21.6V26.4C33.6 27.7255 32.5255 28.8 31.2 28.8C29.8745 28.8 28.8 27.7255 28.8 26.4V21.6Z" fill="white"/>
+              <path d="M34 34L38 38M38 34L34 38" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <div class="absolute -bottom-1 -right-1 text-xs font-bold text-[#ff6309]">.lol</div>
+          </div>
+          <h1 class="text-2xl font-bold text-[#1f1d79] ml-2">Diplomaq</h1>
+        </div>
+        
+        <div class="bg-red-100 p-4 rounded-lg mb-6">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-red-500 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <h2 class="text-2xl font-bold text-red-600">Account Suspended</h2>
+        </div>
+        
+        <p class="text-gray-600 mb-4">Your account has been suspended from accessing Diplomaq.lol.</p>
+        
+        <div class="bg-gray-50 p-4 rounded-lg mb-6 text-left">
+          <h3 class="font-bold text-gray-700 mb-2">Reason:</h3>
+          <p id="ban-reason" class="text-gray-600"></p>
+          
+          <h3 class="font-bold text-gray-700 mt-4 mb-2">Suspension expires:</h3>
+          <p id="ban-expires" class="text-gray-600"></p>
+        </div>
+        
+        <p class="text-gray-600 text-sm mb-6">If you believe this is a mistake, please contact our support team.</p>
+        
+        <a href="index.html" class="block text-[#1f1d79] hover:underline">Return to Home</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Get ban details from URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const reason = urlParams.get('reason') || 'Violation of community guidelines';
+      const expires = urlParams.get('expires');
+      
+      // Set reason text
+      document.getElementById('ban-reason').textContent = reason;
+      
+      // Set expiry text
+      const expiryElement = document.getElementById('ban-expires');
+      if (expires && expires !== 'never') {
+        const expiryDate = new Date(expires);
+        expiryElement.textContent = expiryDate.toLocaleString();
+      } else {
+        expiryElement.textContent = 'Permanent suspension';
+      }
+      
+      // Clear any stored auth tokens
+      localStorage.removeItem('userToken');
+      localStorage.removeItem('userEmail');
+      localStorage.removeItem('userName');
+      localStorage.removeItem('userAvatar');
+      localStorage.removeItem('userUsername');
+      localStorage.removeItem('userSubscription');
+      localStorage.removeItem('userSubscriptionExpiry');
+    });
+  </script>
+</body>
+</html>

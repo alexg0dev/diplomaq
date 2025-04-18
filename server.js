@@ -7,8 +7,15 @@ const { OAuth2Client } = require("google-auth-library")
 const dotenv = require("dotenv")
 const crypto = require("crypto")
 const jwt = require("jsonwebtoken")
+const Pusher = require("pusher")
+const { Pool } = require("pg")
+const requestIp = require("request-ip")
 
 dotenv.config()
+
+// Import custom JS files
+const matchmaking = require("./matchmaking.js")
+const animations = require("./animations.js")
 
 // Initialize express app
 const app = express()
@@ -21,13 +28,43 @@ const JWT_SECRET = "diplomaq-secret-key" // Replace with a strong secret in prod
 const REDIRECT_URI = "https://diplomaq-production.up.railway.app/"
 const FRONTEND_URL = "https://diplomaq-production.up.railway.app"
 
+// Admin emails with ban permissions
+const ADMIN_EMAILS = ["alexandroghanem@gmail.com", "alexandroghanem1@gmail.com"]
+
 // Initialize Google OAuth2 client
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, REDIRECT_URI)
+
+// Initialize Pusher
+const pusher = new Pusher({
+  appId: process.env.PUSHER_APP_ID || "1723394",
+  key: process.env.PUSHER_KEY || "6a59bdd1f5df05fd2554",
+  secret: process.env.PUSHER_SECRET || "a7a5c1c3a6a1a1a1a1a1",
+  cluster: process.env.PUSHER_CLUSTER || "eu",
+  useTLS: true,
+})
+
+// Initialize custom modules
+matchmaking.init(pusher)
+
+// Initialize PostgreSQL connection (if available)
+let pool
+try {
+  if (process.env.DATABASE_URL) {
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+    })
+    console.log("PostgreSQL connection initialized")
+  }
+} catch (error) {
+  console.error("Error initializing PostgreSQL:", error)
+}
 
 // Middleware
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(cors())
+app.use(requestIp.mw()) // Add IP detection middleware
 
 // Serve static files from the root directory
 app.use(express.static("./"))
@@ -36,6 +73,8 @@ app.use(express.static("./"))
 const DATA_FILE = path.join(__dirname, "data.json")
 const DEBATES_FILE = path.join(__dirname, "debates.json")
 const MESSAGES_FILE = path.join(__dirname, "messages.json")
+const BANS_FILE = path.join(__dirname, "bans.json")
+const MATCHMAKING_FILE = path.join(__dirname, "matchmaking.json")
 
 // Initialize data files if they don't exist
 if (!fs.existsSync(DATA_FILE)) {
@@ -108,6 +147,17 @@ if (!fs.existsSync(MESSAGES_FILE)) {
   fs.writeJsonSync(MESSAGES_FILE, { messages: [] })
 }
 
+if (!fs.existsSync(BANS_FILE)) {
+  fs.writeJsonSync(BANS_FILE, { bans: [] })
+}
+
+if (!fs.existsSync(MATCHMAKING_FILE)) {
+  fs.writeJsonSync(MATCHMAKING_FILE, {
+    queue: [],
+    matches: [],
+  })
+}
+
 // Helper functions
 const readData = () => {
   try {
@@ -166,6 +216,140 @@ const writeMessages = (data) => {
   }
 }
 
+const readBans = () => {
+  try {
+    return fs.readJsonSync(BANS_FILE)
+  } catch (error) {
+    console.error("Error reading bans file:", error)
+    return { bans: [] }
+  }
+}
+
+const writeBans = (data) => {
+  try {
+    fs.writeJsonSync(BANS_FILE, data)
+    return true
+  } catch (error) {
+    console.error("Error writing to bans file:", error)
+    return false
+  }
+}
+
+const readMatchmaking = () => {
+  try {
+    return fs.readJsonSync(MATCHMAKING_FILE)
+  } catch (error) {
+    console.error("Error reading matchmaking file:", error)
+    return { queue: [], matches: [] }
+  }
+}
+
+const writeMatchmaking = (data) => {
+  try {
+    fs.writeJsonSync(MATCHMAKING_FILE, data)
+    return true
+  } catch (error) {
+    console.error("Error writing to matchmaking file:", error)
+    return false
+  }
+}
+
+// Ban management functions
+const isUserBanned = (email, ip) => {
+  const bansData = readBans()
+  const now = new Date()
+
+  // Filter active bans for this email or IP
+  const activeBans = bansData.bans.filter((ban) => {
+    // Check if ban is still active based on duration
+    if (ban.permanent) return true
+    if (ban.expiresAt && new Date(ban.expiresAt) > now) {
+      // Ban is still active, check if it matches email or IP
+      return ban.email === email || ban.ip === ip
+    }
+    return false
+  })
+
+  return activeBans.length > 0 ? activeBans[0] : null
+}
+
+const banUser = (email, ip, duration, reason, adminEmail) => {
+  if (!ADMIN_EMAILS.includes(adminEmail)) {
+    return { success: false, error: "Unauthorized. Only admins can ban users." }
+  }
+
+  const bansData = readBans()
+  const now = new Date()
+  let expiresAt = null
+  let permanent = false
+
+  // Calculate expiration date based on duration
+  switch (duration) {
+    case "week":
+      expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) // 7 days
+      break
+    case "month":
+      expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) // 30 days
+      break
+    case "year":
+      expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000) // 365 days
+      break
+    case "permanent":
+      permanent = true
+      break
+    default:
+      return { success: false, error: "Invalid ban duration" }
+  }
+
+  // Create new ban
+  const newBan = {
+    id: crypto.randomUUID(),
+    email,
+    ip,
+    reason: reason || "Violation of community guidelines",
+    createdAt: now.toISOString(),
+    expiresAt: expiresAt ? expiresAt.toISOString() : null,
+    permanent,
+    bannedBy: adminEmail,
+  }
+
+  // Remove any existing bans for this email or IP
+  bansData.bans = bansData.bans.filter((ban) => ban.email !== email && ban.ip !== ip)
+
+  // Add new ban
+  bansData.bans.push(newBan)
+  writeBans(bansData)
+
+  // Log the ban
+  console.log(`User banned: ${email} (${ip}) by ${adminEmail} for ${duration}. Reason: ${reason}`)
+
+  return { success: true, ban: newBan }
+}
+
+const unbanUser = (email, adminEmail) => {
+  if (!ADMIN_EMAILS.includes(adminEmail)) {
+    return { success: false, error: "Unauthorized. Only admins can unban users." }
+  }
+
+  const bansData = readBans()
+
+  // Find the ban
+  const banIndex = bansData.bans.findIndex((ban) => ban.email === email)
+
+  if (banIndex === -1) {
+    return { success: false, error: "User is not banned" }
+  }
+
+  // Remove the ban
+  const removedBan = bansData.bans.splice(banIndex, 1)[0]
+  writeBans(bansData)
+
+  // Log the unban
+  console.log(`User unbanned: ${email} by ${adminEmail}`)
+
+  return { success: true, unbannedUser: email }
+}
+
 // Add this function after the writeData function to handle Google authentication
 const verifyGoogleToken = async (token) => {
   try {
@@ -187,8 +371,46 @@ const verifyGoogleToken = async (token) => {
   }
 }
 
+// Ban check middleware
+const checkBanMiddleware = (req, res, next) => {
+  // Skip ban check for ban management endpoints
+  if (req.path.startsWith("/api/admin/ban") || req.path.startsWith("/api/admin/unban")) {
+    return next()
+  }
+
+  const email = req.body.email || req.query.email
+  const ip = req.clientIp
+
+  if (email || ip) {
+    const ban = isUserBanned(email, ip)
+    if (ban) {
+      return res.status(403).json({
+        error: "Account banned",
+        reason: ban.reason,
+        expiresAt: ban.expiresAt,
+        permanent: ban.permanent,
+      })
+    }
+  }
+
+  next()
+}
+
+// Apply ban check middleware to all API routes
+app.use("/api", checkBanMiddleware)
+
 // Google OAuth login endpoint
 app.get("/api/auth/google", (req, res) => {
+  // Store the referrer URL to redirect back after login
+  const referrer = req.headers.referer || FRONTEND_URL
+
+  // Store the referrer in a cookie
+  res.cookie("auth_redirect", referrer, {
+    maxAge: 10 * 60 * 1000, // 10 minutes
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+  })
+
   const authUrl = googleClient.generateAuthUrl({
     access_type: "offline",
     scope: ["profile", "email"],
@@ -200,6 +422,12 @@ app.get("/api/auth/google", (req, res) => {
 // Google OAuth callback endpoint
 app.get("/api/auth/callback/google", async (req, res) => {
   const { code } = req.query
+
+  // Get the redirect URL from cookie
+  const redirectUrl = req.cookies.auth_redirect || `${FRONTEND_URL}/index.html`
+
+  // Clear the cookie
+  res.clearCookie("auth_redirect")
 
   if (!code) {
     return res.redirect(`${FRONTEND_URL}/signin.html?error=no_code`)
@@ -223,6 +451,15 @@ app.get("/api/auth/callback/google", async (req, res) => {
       return res.redirect(`${FRONTEND_URL}/signin.html?error=email_not_verified`)
     }
 
+    // Check if user is banned
+    const ip = req.clientIp
+    const ban = isUserBanned(email, ip)
+    if (ban) {
+      return res.redirect(
+        `${FRONTEND_URL}/banned.html?reason=${encodeURIComponent(ban.reason)}&expires=${encodeURIComponent(ban.expiresAt || "never")}`,
+      )
+    }
+
     // Check if user exists in our database
     const data = readData()
     let user = data.users.find((u) => u.email === email)
@@ -233,7 +470,7 @@ app.get("/api/auth/callback/google", async (req, res) => {
       user.name = name
       user.avatar = picture
       user.lastLogin = new Date().toISOString()
-      user.loyaltyPoints = user.loyaltyPoints || 0
+      user.lastIp = ip // Track IP for ban purposes
     } else {
       // Create new user
       user = {
@@ -244,11 +481,12 @@ app.get("/api/auth/callback/google", async (req, res) => {
         createdAt: new Date().toISOString(),
         lastLogin: new Date().toISOString(),
         subscription: "free", // Default subscription
-        loyaltyPoints: 0,
         debatesJoined: 0,
         debatesCreated: 0,
         debatesJoinedToday: 0,
         lastDebateJoinDate: null,
+        lastIp: ip, // Track IP for ban purposes
+        ipHistory: [{ ip, timestamp: new Date().toISOString() }],
       }
       data.users.push(user)
       needUsername = true
@@ -264,10 +502,15 @@ app.get("/api/auth/callback/google", async (req, res) => {
     // Redirect to the frontend with user data
     if (needUsername) {
       res.redirect(
-        `${FRONTEND_URL}/signin.html?token=${jwtToken}&email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}&avatar=${encodeURIComponent(picture)}&needUsername=true`,
+        `${FRONTEND_URL}/signin.html?token=${jwtToken}&email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}&avatar=${encodeURIComponent(picture)}&needUsername=true&redirect=${encodeURIComponent(redirectUrl)}`,
       )
     } else {
-      res.redirect(`${FRONTEND_URL}/debates.html?token=${jwtToken}&email=${encodeURIComponent(email)}`)
+      // Redirect back to the original page
+      const redirectWithParams = redirectUrl.includes("?")
+        ? `${redirectUrl}&token=${jwtToken}&email=${encodeURIComponent(email)}`
+        : `${redirectUrl}?token=${jwtToken}&email=${encodeURIComponent(email)}`
+
+      res.redirect(redirectWithParams)
     }
   } catch (error) {
     console.error("Google callback error:", error)
@@ -279,6 +522,7 @@ app.get("/api/auth/callback/google", async (req, res) => {
 app.post("/api/auth/google", async (req, res) => {
   try {
     const { token } = req.body
+    const ip = req.clientIp
 
     if (!token) {
       return res.status(400).json({ error: "Token is required" })
@@ -296,6 +540,17 @@ app.post("/api/auth/google", async (req, res) => {
       return res.status(401).json({ error: "Email not verified" })
     }
 
+    // Check if user is banned
+    const ban = isUserBanned(email, ip)
+    if (ban) {
+      return res.status(403).json({
+        error: "Account banned",
+        reason: ban.reason,
+        expiresAt: ban.expiresAt,
+        permanent: ban.permanent,
+      })
+    }
+
     // Check if user exists in our database
     const data = readData()
     let user = data.users.find((u) => u.email === email)
@@ -305,7 +560,16 @@ app.post("/api/auth/google", async (req, res) => {
       user.name = name
       user.avatar = picture
       user.lastLogin = new Date().toISOString()
-      user.loyaltyPoints = user.loyaltyPoints || 0
+      user.lastIp = ip
+
+      // Add IP to history if it's different
+      if (!user.ipHistory) {
+        user.ipHistory = []
+      }
+
+      if (!user.ipHistory.some((entry) => entry.ip === ip)) {
+        user.ipHistory.push({ ip, timestamp: new Date().toISOString() })
+      }
     } else {
       // Create new user
       user = {
@@ -316,11 +580,12 @@ app.post("/api/auth/google", async (req, res) => {
         createdAt: new Date().toISOString(),
         lastLogin: new Date().toISOString(),
         subscription: "free", // Default subscription
-        loyaltyPoints: 0,
         debatesJoined: 0,
         debatesCreated: 0,
         debatesJoinedToday: 0,
         lastDebateJoinDate: null,
+        lastIp: ip,
+        ipHistory: [{ ip, timestamp: new Date().toISOString() }],
       }
       data.users.push(user)
     }
@@ -343,7 +608,7 @@ app.post("/api/auth/google", async (req, res) => {
         avatar: user.avatar,
         subscription: user.subscription,
         subscription_expiry: user.subscription_expiry,
-        loyaltyPoints: user.loyaltyPoints,
+        isAdmin: ADMIN_EMAILS.includes(email),
       },
     })
   } catch (error) {
@@ -354,22 +619,44 @@ app.post("/api/auth/google", async (req, res) => {
 
 app.post("/api/auth/verify", (req, res) => {
   const { email } = req.body
+  const ip = req.clientIp
 
   if (!email) {
     return res.json({ valid: false })
+  }
+
+  // Check if user is banned
+  const ban = isUserBanned(email, ip)
+  if (ban) {
+    return res.status(403).json({
+      error: "Account banned",
+      reason: ban.reason,
+      expiresAt: ban.expiresAt,
+      permanent: ban.permanent,
+    })
   }
 
   const data = readData()
   const user = data.users.find((u) => u.email === email)
 
   if (user) {
+    // Update IP if needed
+    if (user.lastIp !== ip) {
+      user.lastIp = ip
+      if (!user.ipHistory) {
+        user.ipHistory = []
+      }
+      user.ipHistory.push({ ip, timestamp: new Date().toISOString() })
+      writeData(data)
+    }
+
     res.json({
       valid: true,
       username: user.username,
       subscription: user.subscription,
-      loyaltyPoints: user.loyaltyPoints || 0,
       avatar: user.avatar,
       name: user.name,
+      isAdmin: ADMIN_EMAILS.includes(email),
     })
   } else {
     res.json({ valid: false })
@@ -381,12 +668,98 @@ app.post("/api/auth/logout", (req, res) => {
   res.json({ success: true })
 })
 
+// Admin ban management endpoints
+app.post("/api/admin/ban", (req, res) => {
+  const { adminEmail, targetEmail, duration, reason } = req.body
+  const targetIp = req.body.targetIp || null
+
+  if (!adminEmail || !targetEmail || !duration) {
+    return res.status(400).json({ error: "Admin email, target email, and duration are required" })
+  }
+
+  if (!ADMIN_EMAILS.includes(adminEmail)) {
+    return res.status(403).json({ error: "Unauthorized. Only admins can ban users." })
+  }
+
+  // If no IP provided, try to find the user's last IP
+  let ip = targetIp
+  if (!ip) {
+    const data = readData()
+    const user = data.users.find((u) => u.email === targetEmail)
+    if (user && user.lastIp) {
+      ip = user.lastIp
+    }
+  }
+
+  const result = banUser(targetEmail, ip, duration, reason, adminEmail)
+
+  if (result.success) {
+    res.json({ success: true, ban: result.ban })
+  } else {
+    res.status(400).json({ error: result.error })
+  }
+})
+
+app.post("/api/admin/unban", (req, res) => {
+  const { adminEmail, targetEmail } = req.body
+
+  if (!adminEmail || !targetEmail) {
+    return res.status(400).json({ error: "Admin email and target email are required" })
+  }
+
+  if (!ADMIN_EMAILS.includes(adminEmail)) {
+    return res.status(403).json({ error: "Unauthorized. Only admins can unban users." })
+  }
+
+  const result = unbanUser(targetEmail, adminEmail)
+
+  if (result.success) {
+    res.json({ success: true, unbannedUser: result.unbannedUser })
+  } else {
+    res.status(400).json({ error: result.error })
+  }
+})
+
+app.get("/api/admin/bans", (req, res) => {
+  const { adminEmail } = req.query
+
+  if (!adminEmail) {
+    return res.status(400).json({ error: "Admin email is required" })
+  }
+
+  if (!ADMIN_EMAILS.includes(adminEmail)) {
+    return res.status(403).json({ error: "Unauthorized. Only admins can view bans." })
+  }
+
+  const bansData = readBans()
+
+  // Filter out expired bans
+  const now = new Date()
+  const activeBans = bansData.bans.filter((ban) => {
+    return ban.permanent || (ban.expiresAt && new Date(ban.expiresAt) > now)
+  })
+
+  res.json({ bans: activeBans })
+})
+
 // User management endpoints
 app.post("/api/user/update", (req, res) => {
   const { email, username } = req.body
+  const ip = req.clientIp
 
   if (!email || !username) {
     return res.status(400).json({ error: "Email and username are required" })
+  }
+
+  // Check if user is banned
+  const ban = isUserBanned(email, ip)
+  if (ban) {
+    return res.status(403).json({
+      error: "Account banned",
+      reason: ban.reason,
+      expiresAt: ban.expiresAt,
+      permanent: ban.permanent,
+    })
   }
 
   const data = readData()
@@ -396,13 +769,22 @@ app.post("/api/user/update", (req, res) => {
     user.username = username
     user.updatedAt = new Date().toISOString()
 
+    // Update IP if needed
+    if (user.lastIp !== ip) {
+      user.lastIp = ip
+      if (!user.ipHistory) {
+        user.ipHistory = []
+      }
+      user.ipHistory.push({ ip, timestamp: new Date().toISOString() })
+    }
+
     writeData(data)
 
     res.json({
       success: true,
       username: user.username,
       subscription: user.subscription,
-      loyaltyPoints: user.loyaltyPoints || 0,
+      isAdmin: ADMIN_EMAILS.includes(email),
     })
   } else {
     res.status(404).json({ error: "User not found" })
@@ -464,9 +846,21 @@ const canJoinMoreDebates = (user) => {
 app.post("/api/debates/:id/join", (req, res) => {
   const { id } = req.params
   const { email } = req.body
+  const ip = req.clientIp
 
   if (!email) {
     return res.status(400).json({ error: "Email is required" })
+  }
+
+  // Check if user is banned
+  const ban = isUserBanned(email, ip)
+  if (ban) {
+    return res.status(403).json({
+      error: "Account banned",
+      reason: ban.reason,
+      expiresAt: ban.expiresAt,
+      permanent: ban.permanent,
+    })
   }
 
   const userData = readData()
@@ -474,6 +868,15 @@ app.post("/api/debates/:id/join", (req, res) => {
 
   if (!user) {
     return res.status(404).json({ error: "User not found" })
+  }
+
+  // Update IP if needed
+  if (user.lastIp !== ip) {
+    user.lastIp = ip
+    if (!user.ipHistory) {
+      user.ipHistory = []
+    }
+    user.ipHistory.push({ ip, timestamp: new Date().toISOString() })
   }
 
   // Check if user can join more debates today
@@ -520,6 +923,16 @@ app.post("/api/debates/:id/join", (req, res) => {
   writeDebates(debatesData)
   writeData(userData)
 
+  // Trigger Pusher event for real-time updates
+  pusher.trigger(`debate-${id}`, "user-joined", {
+    user: {
+      id: user.id,
+      name: user.name,
+      username: user.username,
+      avatar: user.avatar,
+    },
+  })
+
   res.json({
     success: true,
     debate,
@@ -532,9 +945,21 @@ app.post("/api/debates/:id/join", (req, res) => {
 // Create a new debate
 app.post("/api/debates", (req, res) => {
   const { title, description, council, email } = req.body
+  const ip = req.clientIp
 
   if (!title || !description || !council || !email) {
     return res.status(400).json({ error: "Title, description, council, and email are required" })
+  }
+
+  // Check if user is banned
+  const ban = isUserBanned(email, ip)
+  if (ban) {
+    return res.status(403).json({
+      error: "Account banned",
+      reason: ban.reason,
+      expiresAt: ban.expiresAt,
+      permanent: ban.permanent,
+    })
   }
 
   const userData = readData()
@@ -542,6 +967,15 @@ app.post("/api/debates", (req, res) => {
 
   if (!user) {
     return res.status(404).json({ error: "User not found" })
+  }
+
+  // Update IP if needed
+  if (user.lastIp !== ip) {
+    user.lastIp = ip
+    if (!user.ipHistory) {
+      user.ipHistory = []
+    }
+    user.ipHistory.push({ ip, timestamp: new Date().toISOString() })
   }
 
   // Create new debate
@@ -581,6 +1015,11 @@ app.post("/api/debates", (req, res) => {
   user.lastDebateJoinDate = new Date().toISOString()
   writeData(userData)
 
+  // Trigger Pusher event for real-time updates
+  pusher.trigger("debates", "debate-created", {
+    debate: newDebate,
+  })
+
   res.json({ success: true, debate: newDebate })
 })
 
@@ -588,9 +1027,21 @@ app.post("/api/debates", (req, res) => {
 app.post("/api/debates/:id/messages", (req, res) => {
   const { id } = req.params
   const { email, content } = req.body
+  const ip = req.clientIp
 
   if (!email || !content) {
     return res.status(400).json({ error: "Email and content are required" })
+  }
+
+  // Check if user is banned
+  const ban = isUserBanned(email, ip)
+  if (ban) {
+    return res.status(403).json({
+      error: "Account banned",
+      reason: ban.reason,
+      expiresAt: ban.expiresAt,
+      permanent: ban.permanent,
+    })
   }
 
   const userData = readData()
@@ -598,6 +1049,16 @@ app.post("/api/debates/:id/messages", (req, res) => {
 
   if (!user) {
     return res.status(404).json({ error: "User not found" })
+  }
+
+  // Update IP if needed
+  if (user.lastIp !== ip) {
+    user.lastIp = ip
+    if (!user.ipHistory) {
+      user.ipHistory = []
+    }
+    user.ipHistory.push({ ip, timestamp: new Date().toISOString() })
+    writeData(userData)
   }
 
   const debatesData = readDebates()
@@ -631,6 +1092,9 @@ app.post("/api/debates/:id/messages", (req, res) => {
   messagesData.messages.push(newMessage)
   writeMessages(messagesData)
 
+  // Trigger Pusher event for real-time updates
+  pusher.trigger(`debate-${id}`, "new-message", newMessage)
+
   res.json({ success: true, message: newMessage })
 })
 
@@ -650,9 +1114,21 @@ app.get("/api/debates/:id/messages", (req, res) => {
 app.post("/api/debates/:id/ai-message", (req, res) => {
   const { id } = req.params
   const { prompt, email } = req.body
+  const ip = req.clientIp
 
   if (!prompt || !email) {
     return res.status(400).json({ error: "Prompt and email are required" })
+  }
+
+  // Check if user is banned
+  const ban = isUserBanned(email, ip)
+  if (ban) {
+    return res.status(403).json({
+      error: "Account banned",
+      reason: ban.reason,
+      expiresAt: ban.expiresAt,
+      permanent: ban.permanent,
+    })
   }
 
   const userData = readData()
@@ -660,6 +1136,16 @@ app.post("/api/debates/:id/ai-message", (req, res) => {
 
   if (!user) {
     return res.status(404).json({ error: "User not found" })
+  }
+
+  // Update IP if needed
+  if (user.lastIp !== ip) {
+    user.lastIp = ip
+    if (!user.ipHistory) {
+      user.ipHistory = []
+    }
+    user.ipHistory.push({ ip, timestamp: new Date().toISOString() })
+    writeData(userData)
   }
 
   // Check if user has access to AI features
@@ -710,7 +1196,485 @@ app.post("/api/debates/:id/ai-message", (req, res) => {
   messagesData.messages.push(aiMessage)
   writeMessages(messagesData)
 
+  // Trigger Pusher event for real-time updates
+  pusher.trigger(`debate-${id}`, "new-message", aiMessage)
+
   res.json({ success: true, message: aiMessage })
+})
+
+// Matchmaking endpoints
+app.post("/api/matchmaking/join", (req, res) => {
+  const { email, council, topic } = req.body
+  const ip = req.clientIp
+
+  if (!email || !council) {
+    return res.status(400).json({ error: "Email and council are required" })
+  }
+
+  // Check if user is banned
+  const ban = isUserBanned(email, ip)
+  if (ban) {
+    return res.status(403).json({
+      error: "Account banned",
+      reason: ban.reason,
+      expiresAt: ban.expiresAt,
+      permanent: ban.permanent,
+    })
+  }
+
+  const userData = readData()
+  const user = userData.users.find((u) => u.email === email)
+
+  if (!user) {
+    return res.status(404).json({ error: "User not found" })
+  }
+
+  // Update IP if needed
+  if (user.lastIp !== ip) {
+    user.lastIp = ip
+    if (!user.ipHistory) {
+      user.ipHistory = []
+    }
+    user.ipHistory.push({ ip, timestamp: new Date().toISOString() })
+    writeData(userData)
+  }
+
+  // Check if user can join more debates today
+  if (!canJoinMoreDebates(user)) {
+    return res.status(403).json({
+      error: "Daily debate limit reached",
+      limit:
+        user.subscription === "free" ? 8 : user.subscription === "pro" ? 20 : user.subscription === "elite" ? 50 : 100,
+    })
+  }
+
+  // Add user to matchmaking queue
+  const matchmakingData = readMatchmaking()
+
+  // Check if user is already in queue
+  const existingQueueEntry = matchmakingData.queue.find((entry) => entry.userId === user.id)
+  if (existingQueueEntry) {
+    return res.status(400).json({ error: "You are already in the matchmaking queue" })
+  }
+
+  // Add to queue
+  const queueEntry = {
+    userId: user.id,
+    email: user.email,
+    name: user.name,
+    username: user.username,
+    avatar: user.avatar,
+    council,
+    topic: topic || null,
+    joinedAt: new Date().toISOString(),
+  }
+
+  matchmakingData.queue.push(queueEntry)
+  writeMatchmaking(matchmakingData)
+
+  // Try to find a match
+  const match = findMatch(queueEntry, matchmakingData.queue)
+
+  if (match) {
+    // Create a new debate for the matched users
+    const debateId = crypto.randomUUID()
+    const newDebate = {
+      id: debateId,
+      title: match.topic || `${match.council} Debate`,
+      description: `Matched debate on ${match.council}`,
+      council: match.council,
+      status: "active",
+      participants: [
+        {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          username: user.username,
+          avatar: user.avatar,
+          joinedAt: new Date().toISOString(),
+        },
+        {
+          id: match.userId,
+          email: match.email,
+          name: match.name,
+          username: match.username,
+          avatar: match.avatar,
+          joinedAt: new Date().toISOString(),
+        },
+      ],
+      isMatchmade: true,
+      createdAt: new Date().toISOString(),
+      startTime: new Date().toISOString(),
+      endTime: null,
+    }
+
+    // Update debates file
+    const debatesData = readDebates()
+    debatesData.debates.push(newDebate)
+    writeDebates(debatesData)
+
+    // Update user stats for both users
+    user.debatesJoined += 1
+    user.debatesJoinedToday = (user.debatesJoinedToday || 0) + 1
+    user.lastDebateJoinDate = new Date().toISOString()
+
+    const matchedUser = userData.users.find((u) => u.id === match.userId)
+    if (matchedUser) {
+      matchedUser.debatesJoined += 1
+      matchedUser.debatesJoinedToday = (matchedUser.debatesJoinedToday || 0) + 1
+      matchedUser.lastDebateJoinDate = new Date().toISOString()
+    }
+
+    writeData(userData)
+
+    // Remove both users from queue
+    matchmakingData.queue = matchmakingData.queue.filter(
+      (entry) => entry.userId !== user.id && entry.userId !== match.userId,
+    )
+
+    // Add to matches
+    matchmakingData.matches.push({
+      debateId,
+      users: [user.id, match.userId],
+      council: match.council,
+      topic: match.topic,
+      matchedAt: new Date().toISOString(),
+    })
+
+    writeMatchmaking(matchmakingData)
+
+    // Trigger Pusher events
+    pusher.trigger(`user-${user.id}`, "match-found", { debate: newDebate })
+    pusher.trigger(`user-${match.userId}`, "match-found", { debate: newDebate })
+    pusher.trigger("debates", "debate-created", { debate: newDebate })
+
+    res.json({
+      success: true,
+      matched: true,
+      debate: newDebate,
+    })
+  } else {
+    // No match found, user is in queue
+    res.json({
+      success: true,
+      matched: false,
+      message: "You've been added to the matchmaking queue. We'll notify you when a match is found.",
+    })
+  }
+})
+
+app.post("/api/matchmaking/leave", (req, res) => {
+  const { email } = req.body
+
+  if (!email) {
+    return res.status(400).json({ error: "Email is required" })
+  }
+
+  const userData = readData()
+  const user = userData.users.find((u) => u.email === email)
+
+  if (!user) {
+    return res.status(404).json({ error: "User not found" })
+  }
+
+  // Remove user from matchmaking queue
+  const matchmakingData = readMatchmaking()
+  matchmakingData.queue = matchmakingData.queue.filter((entry) => entry.userId !== user.id)
+  writeMatchmaking(matchmakingData)
+
+  res.json({
+    success: true,
+    message: "You've been removed from the matchmaking queue.",
+  })
+})
+
+app.get("/api/matchmaking/status", (req, res) => {
+  const { email } = req.query
+
+  if (!email) {
+    return res.status(400).json({ error: "Email is required" })
+  }
+
+  const userData = readData()
+  const user = userData.users.find((u) => u.email === email)
+
+  if (!user) {
+    return res.status(404).json({ error: "User not found" })
+  }
+
+  // Check if user is in queue
+  const matchmakingData = readMatchmaking()
+  const queueEntry = matchmakingData.queue.find((entry) => entry.userId === user.id)
+
+  if (queueEntry) {
+    res.json({
+      inQueue: true,
+      queueEntry,
+      queuePosition: matchmakingData.queue.findIndex((entry) => entry.userId === user.id) + 1,
+      queueSize: matchmakingData.queue.length,
+    })
+  } else {
+    res.json({
+      inQueue: false,
+    })
+  }
+})
+
+// Helper function to find a match
+function findMatch(user, queue) {
+  // Filter out the current user
+  const potentialMatches = queue.filter((entry) => entry.userId !== user.userId && entry.council === user.council)
+
+  if (potentialMatches.length === 0) {
+    return null
+  }
+
+  // If user specified a topic, try to match with someone who wants the same topic
+  if (user.topic) {
+    const topicMatch = potentialMatches.find((entry) => entry.topic === user.topic)
+    if (topicMatch) {
+      return topicMatch
+    }
+  }
+
+  // Otherwise, match with the user who has been waiting the longest
+  potentialMatches.sort((a, b) => new Date(a.joinedAt) - new Date(b.joinedAt))
+  return potentialMatches[0]
+}
+
+// Add a user profile endpoint
+app.get("/api/user/profile", (req, res) => {
+  const { email } = req.query
+  const ip = req.clientIp
+
+  if (!email) {
+    return res.status(400).json({ error: "Email is required" })
+  }
+
+  // Check if user is banned
+  const ban = isUserBanned(email, ip)
+  if (ban) {
+    return res.status(403).json({
+      error: "Account banned",
+      reason: ban.reason,
+      expiresAt: ban.expiresAt,
+      permanent: ban.permanent,
+    })
+  }
+
+  const data = readData()
+  const user = data.users.find((u) => u.email === email)
+
+  if (!user) {
+    return res.status(404).json({ error: "User not found" })
+  }
+
+  // Update IP if needed
+  if (user.lastIp !== ip) {
+    user.lastIp = ip
+    if (!user.ipHistory) {
+      user.ipHistory = []
+    }
+    user.ipHistory.push({ ip, timestamp: new Date().toISOString() })
+    writeData(data)
+  }
+
+  // Check if subscription is expired
+  let isExpired = false
+  if (user.subscription !== "free" && user.subscription_expiry) {
+    isExpired = new Date(user.subscription_expiry) < new Date()
+
+    // Auto-downgrade expired subscriptions
+    if (isExpired && user.subscription !== "free") {
+      user.subscription = "free"
+      user.subscription_expired_at = new Date().toISOString()
+      writeData(data)
+    }
+  }
+
+  // Return user profile data
+  res.json({
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    username: user.username,
+    avatar: user.avatar,
+    subscription: user.subscription,
+    subscription_expiry: user.subscription_expiry,
+    isExpired,
+    lastLogin: user.lastLogin,
+    createdAt: user.createdAt,
+    debatesJoined: user.debatesJoined || 0,
+    debatesCreated: user.debatesCreated || 0,
+    debatesJoinedToday: user.debatesJoinedToday || 0,
+    isAdmin: ADMIN_EMAILS.includes(email),
+  })
+})
+
+// Helper function to calculate expiry date
+function calculateExpiryDate(startDate, days) {
+  const expiryDate = new Date(startDate)
+  expiryDate.setDate(expiryDate.getDate() + days)
+  return expiryDate.toISOString()
+}
+
+// Helper function to log transactions
+function logTransaction(transactionData) {
+  const logFile = path.join(__dirname, "kofi_transactions.json")
+  let transactions = []
+
+  // Read existing transactions if file exists
+  if (fs.existsSync(logFile)) {
+    try {
+      transactions = fs.readJsonSync(logFile)
+    } catch (error) {
+      console.error("Error reading transaction log:", error)
+    }
+  }
+
+  // Add new transaction with timestamp
+  transactions.push({
+    ...transactionData,
+    logged_at: new Date().toISOString(),
+  })
+
+  // Write updated transactions
+  try {
+    fs.writeJsonSync(logFile, transactions)
+  } catch (error) {
+    console.error("Error writing transaction log:", error)
+  }
+}
+
+// Subscription management endpoints
+app.get("/api/subscriptions/status", (req, res) => {
+  const { email } = req.query
+  const ip = req.clientIp
+
+  if (!email) {
+    return res.status(400).json({ error: "Email is required" })
+  }
+
+  // Check if user is banned
+  const ban = isUserBanned(email, ip)
+  if (ban) {
+    return res.status(403).json({
+      error: "Account banned",
+      reason: ban.reason,
+      expiresAt: ban.expiresAt,
+      permanent: ban.permanent,
+    })
+  }
+
+  const data = readData()
+  const user = data.users.find((u) => u.email === email)
+
+  if (!user) {
+    return res.status(404).json({ error: "User not found" })
+  }
+
+  // Update IP if needed
+  if (user.lastIp !== ip) {
+    user.lastIp = ip
+    if (!user.ipHistory) {
+      user.ipHistory = []
+    }
+    user.ipHistory.push({ ip, timestamp: new Date().toISOString() })
+    writeData(data)
+  }
+
+  // Check if subscription is expired
+  let isExpired = false
+  if (user.subscription !== "free" && user.subscription_expiry) {
+    isExpired = new Date(user.subscription_expiry) < new Date()
+  }
+
+  res.json({
+    subscription: user.subscription,
+    expiry: user.subscription_expiry || null,
+    isExpired,
+    lastUpdated: user.subscription_updated || null,
+    isAdmin: ADMIN_EMAILS.includes(email),
+  })
+})
+
+// Function to verify if a user has access to a specific feature
+app.get("/api/access/verify", (req, res) => {
+  const { email, feature } = req.query
+  const ip = req.clientIp
+
+  if (!email || !feature) {
+    return res.status(400).json({ error: "Email and feature are required" })
+  }
+
+  // Check if user is banned
+  const ban = isUserBanned(email, ip)
+  if (ban) {
+    return res.status(403).json({
+      error: "Account banned",
+      reason: ban.reason,
+      expiresAt: ban.expiresAt,
+      permanent: ban.permanent,
+    })
+  }
+
+  const data = readData()
+  const user = data.users.find((u) => u.email === email)
+
+  if (!user) {
+    return res.status(404).json({ error: "User not found" })
+  }
+
+  // Update IP if needed
+  if (user.lastIp !== ip) {
+    user.lastIp = ip
+    if (!user.ipHistory) {
+      user.ipHistory = []
+    }
+    user.ipHistory.push({ ip, timestamp: new Date().toISOString() })
+    writeData(data)
+  }
+
+  // Check if subscription is expired
+  let isExpired = false
+  if (user.subscription !== "free" && user.subscription_expiry) {
+    isExpired = new Date(user.subscription_expiry) < new Date()
+  }
+
+  // If subscription is expired, downgrade to free
+  if (isExpired && user.subscription !== "free") {
+    user.subscription = "free"
+    user.subscription_expired_at = new Date().toISOString()
+    writeData(data)
+  }
+
+  // Define feature access based on subscription level
+  const featureAccess = {
+    "debate-ai": ["pro", "elite", "institutional"],
+    "unlimited-debates": ["pro", "elite", "institutional"],
+    "advanced-analytics": ["elite", "institutional"],
+    "custom-topics": ["elite", "institutional"],
+    "team-management": ["institutional"],
+    "white-label": ["institutional"],
+    "admin-ban": ["admin"], // Special admin-only feature
+  }
+
+  // Check if user's subscription grants access to the requested feature
+  let hasAccess = false
+
+  if (feature === "admin-ban") {
+    hasAccess = ADMIN_EMAILS.includes(email)
+  } else {
+    hasAccess = featureAccess[feature] ? featureAccess[feature].includes(user.subscription) : false
+  }
+
+  res.json({
+    hasAccess,
+    subscription: user.subscription,
+    isExpired,
+    feature,
+    isAdmin: ADMIN_EMAILS.includes(email),
+  })
 })
 
 // Enhanced Ko-fi webhook endpoint
@@ -722,7 +1686,7 @@ app.post("/api/kofi/webhook", (req, res) => {
     const data = req.body.data || req.body
 
     // Verify Ko-fi verification token
-    const expectedToken = "adbb7035-7f57-49ca-b3ee-5844ecb07a53"
+    const expectedToken = process.env.KOFI_VERIFICATION_TOKEN || "adbb7035-7f57-49ca-b3ee-5844ecb07a53"
     if (expectedToken && data.verification_token !== expectedToken) {
       console.error("Invalid verification token received:", data.verification_token)
       return res.status(401).json({ error: "Invalid verification token" })
@@ -761,7 +1725,7 @@ app.post("/api/kofi/webhook", (req, res) => {
         postcode: postal_code || "Not provided",
         phone: phone_number || "Not provided",
         amount: amount || "0.05",
-        currency: currency || "GBP",
+        currency: currency,
         timestamp: new Date().toISOString(),
       }
 
@@ -809,7 +1773,6 @@ app.post("/api/kofi/webhook", (req, res) => {
             user.kofi_transaction_id = kofi_transaction_id
             user.subscription_expiry = calculateExpiryDate(new Date(), 30) // 30 days subscription
             user.payment_history = user.payment_history || []
-            user.loyaltyPoints = (user.loyaltyPoints || 0) + 20 // Add loyalty points
 
             user.payment_history.push({
               type: "subscription",
@@ -818,14 +1781,11 @@ app.post("/api/kofi/webhook", (req, res) => {
               currency,
               transaction_id: kofi_transaction_id,
               timestamp: new Date().toISOString(),
-              loyaltyPointsEarned: 20,
             })
 
             writeData(userData)
 
-            console.log(
-              `Updated subscription for ${email} to ${subscriptionTier} and added 20 loyalty points. Total: ${user.loyaltyPoints}`,
-            )
+            console.log(`Updated subscription for ${email} to ${subscriptionTier}`)
 
             // Log transaction to a separate file for auditing
             logTransaction({
@@ -837,7 +1797,6 @@ app.post("/api/kofi/webhook", (req, res) => {
               kofi_transaction_id,
               timestamp,
               is_first_subscription_payment,
-              loyaltyPointsEarned: 20,
             })
 
             // Send welcome email for new subscribers
@@ -865,7 +1824,6 @@ app.post("/api/kofi/webhook", (req, res) => {
               subscription_updated: new Date().toISOString(),
               kofi_transaction_id: kofi_transaction_id,
               subscription_expiry: calculateExpiryDate(new Date(), 30),
-              loyaltyPoints: 20, // Initial loyalty points
               payment_history: [
                 {
                   type: "subscription",
@@ -880,7 +1838,6 @@ app.post("/api/kofi/webhook", (req, res) => {
                   currency,
                   transaction_id: kofi_transaction_id,
                   timestamp: new Date().toISOString(),
-                  loyaltyPointsEarned: 20,
                 },
               ],
             }
@@ -889,9 +1846,7 @@ app.post("/api/kofi/webhook", (req, res) => {
             userData.users.push(newUser)
             writeData(userData)
 
-            console.log(
-              `Created new user with email ${email} and subscription ${newUser.subscription} and 20 loyalty points`,
-            )
+            console.log(`Created new user with email ${email} and subscription ${newUser.subscription}`)
 
             // Log transaction
             logTransaction({
@@ -904,7 +1859,6 @@ app.post("/api/kofi/webhook", (req, res) => {
               timestamp,
               is_first_subscription_payment,
               new_user: true,
-              loyaltyPointsEarned: 20,
             })
 
             // Send welcome email
@@ -931,9 +1885,6 @@ app.post("/api/kofi/webhook", (req, res) => {
               kofi_transaction_id,
             }
 
-            // Add loyalty points
-            user.loyaltyPoints = (user.loyaltyPoints || 0) + 20
-
             // If donation amount is sufficient, upgrade subscription
             const amountNum = Number.parseFloat(amount)
             let subscriptionTier = user.subscription
@@ -957,8 +1908,6 @@ app.post("/api/kofi/webhook", (req, res) => {
 
             writeData(userData)
 
-            console.log(`Added 20 loyalty points to ${email}. Total: ${user.loyaltyPoints}`)
-
             // Log transaction
             logTransaction({
               email,
@@ -968,7 +1917,6 @@ app.post("/api/kofi/webhook", (req, res) => {
               kofi_transaction_id,
               timestamp,
               subscription_upgraded: tierRank[subscriptionTier] > tierRank[user.subscription],
-              loyaltyPointsEarned: 20,
             })
           } else {
             console.log(`User with email ${email} not found for donation, creating new user`)
@@ -981,7 +1929,6 @@ app.post("/api/kofi/webhook", (req, res) => {
               createdAt: new Date().toISOString(),
               lastLogin: new Date().toISOString(),
               subscription: "free",
-              loyaltyPoints: 20,
               last_donation: {
                 amount,
                 currency,
@@ -994,7 +1941,7 @@ app.post("/api/kofi/webhook", (req, res) => {
             userData.users.push(newUser)
             writeData(userData)
 
-            console.log(`Created new user with email ${email} and 20 loyalty points`)
+            console.log(`Created new user with email ${email}`)
           }
         }
         break
@@ -1008,8 +1955,6 @@ app.post("/api/kofi/webhook", (req, res) => {
           const user = userData.users.find((u) => u.email === email)
 
           if (user) {
-            // Add loyalty points
-            user.loyaltyPoints = (user.loyaltyPoints || 0) + 20
             user.shop_orders = user.shop_orders || []
             user.shop_orders.push({
               items: shop_items,
@@ -1017,11 +1962,10 @@ app.post("/api/kofi/webhook", (req, res) => {
               currency,
               transaction_id: kofi_transaction_id,
               timestamp: new Date().toISOString(),
-              loyaltyPointsEarned: 20,
             })
 
             writeData(userData)
-            console.log(`Added 20 loyalty points to ${email} for shop order. Total: ${user.loyaltyPoints}`)
+            console.log(`Recorded shop order for ${email}`)
           } else {
             console.log(`User with email ${email} not found for shop order, creating new user`)
 
@@ -1033,7 +1977,6 @@ app.post("/api/kofi/webhook", (req, res) => {
               createdAt: new Date().toISOString(),
               lastLogin: new Date().toISOString(),
               subscription: "free",
-              loyaltyPoints: 20,
               shop_orders: [
                 {
                   items: shop_items,
@@ -1041,7 +1984,6 @@ app.post("/api/kofi/webhook", (req, res) => {
                   currency,
                   transaction_id: kofi_transaction_id,
                   timestamp: new Date().toISOString(),
-                  loyaltyPointsEarned: 20,
                 },
               ],
             }
@@ -1050,7 +1992,7 @@ app.post("/api/kofi/webhook", (req, res) => {
             userData.users.push(newUser)
             writeData(userData)
 
-            console.log(`Created new user with email ${email} and 20 loyalty points for shop order`)
+            console.log(`Created new user with email ${email} for shop order`)
           }
         }
         break
@@ -1066,193 +2008,21 @@ app.post("/api/kofi/webhook", (req, res) => {
   }
 })
 
-// Add a user profile endpoint
-app.get("/api/user/profile", (req, res) => {
-  const { email } = req.query
-
-  if (!email) {
-    return res.status(400).json({ error: "Email is required" })
-  }
-
-  const data = readData()
-  const user = data.users.find((u) => u.email === email)
-
-  if (!user) {
-    return res.status(404).json({ error: "User not found" })
-  }
-
-  // Check if subscription is expired
-  let isExpired = false
-  if (user.subscription !== "free" && user.subscription_expiry) {
-    isExpired = new Date(user.subscription_expiry) < new Date()
-
-    // Auto-downgrade expired subscriptions
-    if (isExpired && user.subscription !== "free") {
-      user.subscription = "free"
-      user.subscription_expired_at = new Date().toISOString()
-      writeData(data)
-    }
-  }
-
-  // Return user profile data
-  res.json({
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    username: user.username,
-    avatar: user.avatar,
-    subscription: user.subscription,
-    subscription_expiry: user.subscription_expiry,
-    isExpired,
-    lastLogin: user.lastLogin,
-    createdAt: user.createdAt,
-    loyaltyPoints: user.loyaltyPoints || 0,
-    debatesJoined: user.debatesJoined || 0,
-    debatesCreated: user.debatesCreated || 0,
-    debatesJoinedToday: user.debatesJoinedToday || 0,
-  })
-})
-
-// Helper function to calculate expiry date
-function calculateExpiryDate(startDate, days) {
-  const expiryDate = new Date(startDate)
-  expiryDate.setDate(expiryDate.getDate() + days)
-  return expiryDate.toISOString()
-}
-
-// Helper function to log transactions
-function logTransaction(transactionData) {
-  const logFile = path.join(__dirname, "kofi_transactions.json")
-  let transactions = []
-
-  // Read existing transactions if file exists
-  if (fs.existsSync(logFile)) {
-    try {
-      transactions = fs.readJsonSync(logFile)
-    } catch (error) {
-      console.error("Error reading transaction log:", error)
-    }
-  }
-
-  // Add new transaction with timestamp
-  transactions.push({
-    ...transactionData,
-    logged_at: new Date().toISOString(),
-  })
-
-  // Write updated transactions
-  try {
-    fs.writeJsonSync(logFile, transactions)
-  } catch (error) {
-    console.error("Error writing transaction log:", error)
-  }
-}
-
-// Subscription management endpoints
-app.get("/api/subscriptions/status", (req, res) => {
-  const { email } = req.query
-
-  if (!email) {
-    return res.status(400).json({ error: "Email is required" })
-  }
-
-  const data = readData()
-  const user = data.users.find((u) => u.email === email)
-
-  if (!user) {
-    return res.status(404).json({ error: "User not found" })
-  }
-
-  // Check if subscription is expired
-  let isExpired = false
-  if (user.subscription !== "free" && user.subscription_expiry) {
-    isExpired = new Date(user.subscription_expiry) < new Date()
-  }
-
-  res.json({
-    subscription: user.subscription,
-    expiry: user.subscription_expiry || null,
-    isExpired,
-    lastUpdated: user.subscription_updated || null,
-    loyaltyPoints: user.loyaltyPoints || 0,
-  })
-})
-
-// Function to verify if a user has access to a specific feature
-app.get("/api/access/verify", (req, res) => {
-  const { email, feature } = req.query
-
-  if (!email || !feature) {
-    return res.status(400).json({ error: "Email and feature are required" })
-  }
-
-  const data = readData()
-  const user = data.users.find((u) => u.email === email)
-
-  if (!user) {
-    return res.status(404).json({ error: "User not found" })
-  }
-
-  // Check if subscription is expired
-  let isExpired = false
-  if (user.subscription !== "free" && user.subscription_expiry) {
-    isExpired = new Date(user.subscription_expiry) < new Date()
-  }
-
-  // If subscription is expired, downgrade to free
-  if (isExpired && user.subscription !== "free") {
-    user.subscription = "free"
-    user.subscription_expired_at = new Date().toISOString()
-    writeData(data)
-  }
-
-  // Define feature access based on subscription level
-  const featureAccess = {
-    "debate-ai": ["pro", "elite", "institutional"],
-    "unlimited-debates": ["pro", "elite", "institutional"],
-    "advanced-analytics": ["elite", "institutional"],
-    "custom-topics": ["elite", "institutional"],
-    "team-management": ["institutional"],
-    "white-label": ["institutional"],
-  }
-
-  // Check if user's subscription grants access to the requested feature
-  const hasAccess = featureAccess[feature] ? featureAccess[feature].includes(user.subscription) : false
-
-  res.json({
-    hasAccess,
-    subscription: user.subscription,
-    isExpired,
-    feature,
-    loyaltyPoints: user.loyaltyPoints || 0,
-  })
-})
-
-// Loyalty points endpoint
-app.get("/api/loyalty/points", (req, res) => {
-  const { email } = req.query
-
-  if (!email) {
-    return res.status(400).json({ error: "Email is required" })
-  }
-
-  const data = readData()
-  const user = data.users.find((u) => u.email === email)
-
-  if (!user) {
-    return res.status(404).json({ error: "User not found" })
-  }
-
-  res.json({
-    loyaltyPoints: user.loyaltyPoints || 0,
-    email: user.email,
-    name: user.name,
-  })
+// Serve debates.html
+app.get("/debates.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "debates.html"))
 })
 
 // Default route handler for the main page
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"))
+  // Check if there are authentication parameters
+  const { token, email } = req.query
+  if (token && email) {
+    // Redirect to index.html with auth parameters
+    res.redirect(`/index.html?token=${token}&email=${encodeURIComponent(email)}`)
+  } else {
+    res.sendFile(path.join(__dirname, "index.html"))
+  }
 })
 
 // Health check endpoint

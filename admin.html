@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - Diplomaq.lol</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1f1d79;
+      --primary-light: #a5bcda;
+      --secondary: #ff6309;
+      --secondary-light: #ff7c30;
+      --accent: #c75495;
+      --bg-cream: #fdfbf6;
+      --text-dark: #454545;
+    }
+    
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: #f0f4fc;
+      color: var(--text-dark);
+      overflow-x: hidden;
+    }
+    
+    .gradient-bg {
+      background: linear-gradient(135deg, #1f1d79 0%, #005791 100%);
+    }
+    
+    .gradient-button {
+      background: linear-gradient(90deg, #ff6309 0%, #ff7c30 100%);
+      transition: all 0.3s ease;
+    }
+    
+    .gradient-button:hover {
+      background: linear-gradient(90deg, #e86a00 0%, #f16a30 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(255, 99, 9, 0.2);
+    }
+    
+    /* Navbar glass effect */
+    .glass-nav {
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="glass-nav shadow-md sticky top-0 z-50 transition-all duration-300">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center space-x-2">
+          <a href="index.html" class="flex items-center">
+            <div class="relative">
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="24" cy="24" r="18" fill="#1f1d79"/>
+                <path d="M24 6C14.0589 6 6 14.0589 6 24C6 33.9411 14.0589 42 24 42C33.9411 42 42 33.9411 42 24C42 14.0589 33.9411 6 24 6Z" fill="#1f1d79"/>
+                <path d="M18 18C18 16.0117 19.6117 14.4 21.6 14.4H26.4C28.3883 14.4 30 16.0117 30 18V30C30 31.9883 28.3883 33.6 26.4 33.6H21.6C19.6117 33.6 18 31.9883 18 30V18Z" fill="white"/>
+                <path d="M14.4 21.6C14.4 20.2745 15.4745 19.2 16.8 19.2C18.1255 19.2 19.2 20.2745 19.2 21.6V26.4C19.2 27.7255 18.1255 28.8 16.8 28.8C15.4745 28.8 14.4 27.7255 14.4 26.4V21.6Z" fill="white"/>
+                <path d="M28.8 21.6C28.8 20.2745 29.8745 19.2 31.2 19.2C32.5255 19.2 33.6 20.2745 33.6 21.6V26.4C33.6 27.7255 32.5255 28.8 31.2 28.8C29.8745 28.8 28.8 27.7255 28.8 26.4V21.6Z" fill="white"/>
+                <path d="M34 34L38 38M38 34L34 38" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+              <div class="absolute -bottom-1 -right-1 text-xs font-bold text-[#ff6309]">.lol</div>
+            </div>
+            <h1 class="text-2xl font-bold text-[#1f1d79]">Diplomaq</h1>
+          </a>
+        </div>
+        <div class="hidden md:flex space-x-6">
+          <a href="index.html" class="text-gray-600 hover:text-[#1f1d79] transition">Home</a>
+          <a href="debates.html" class="text-gray-600 hover:text-[#1f1d79] transition">Debates</a>
+          <a href="admin.html" class="text-[#1f1d79] font-medium transition">Admin</a>
+          <a href="profile.html" class="text-gray-600 hover:text-[#1f1d79] transition">Profile</a>
+        </div>
+        <div class="flex items-center">
+          <div id="user-info" class="mr-4 hidden">
+            <div class="flex items-center">
+              <img id="user-avatar" src="/placeholder.svg" alt="User" class="w-8 h-8 rounded-full mr-2">
+              <span id="user-name" class="text-sm font-medium"></span>
+            </div>
+          </div>
+          <a href="#" id="logout-btn" class="px-4 py-2 border-2 border-[#1f1d79] text-[#1f1d79] font-medium rounded-md hover:bg-[#1f1d79] hover:text-white transition">Sign Out</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Admin Dashboard -->
+  <main class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-8">
+      <h1 class="text-3xl font-bold text-[#1f1d79]">Admin Dashboard</h1>
+      <div class="bg-red-100 text-red-800 px-4 py-2 rounded-md">
+        <span class="font-medium">Admin Access Only</span>
+      </div>
+    </div>
+    
+    <!-- User Management Section -->
+    <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+      <h2 class="text-xl font-bold text-[#1f1d79] mb-4">User Management</h2>
+      
+      <!-- Ban User Form -->
+      <div class="mb-6">
+        <h3 class="text-lg font-medium text-gray-800 mb-3">Ban User</h3>
+        <form id="ban-user-form" class="space-y-4">
+          <div>
+            <label for="target-email" class="block text-sm font-medium text-gray-700 mb-1">User Email</label>
+            <input type="email" id="target-email" name="targetEmail" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]">
+          </div>
+          
+          <div>
+            <label for="ban-reason" class="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+            <textarea id="ban-reason" name="reason" rows="3" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]"></textarea>
+          </div>
+          
+          <div>
+            <label for="ban-duration" class="block text-sm font-medium text-gray-700 mb-1">Duration</label>
+            <select id="ban-duration" name="duration" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]">
+              <option value="week">1 Week</option>
+              <option value="month">1 Month</option>
+              <option value="year">1 Year</option>
+              <option value="permanent">Permanent</option>
+            </select>
+          </div>
+          
+          <div class="pt-2">
+            <button type="submit" class="px-4 py-2 bg-red-600 text-white font-medium rounded-md hover:bg-red-700 transition">Ban User</button>
+          </div>
+        </form>
+      </div>
+      
+      <!-- Unban User Form -->
+      <div>
+        <h3 class="text-lg font-medium text-gray-800 mb-3">Unban User</h3>
+        <form id="unban-user-form" class="space-y-4">
+          <div>
+            <label for="unban-email" class="block text-sm font-medium text-gray-700 mb-1">User Email</label>
+            <input type="email" id="unban-email" name="targetEmail" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]">
+          </div>
+          
+          <div class="pt-2">
+            <button type="submit" class="px-4 py-2 bg-green-600 text-white font-medium rounded-md hover:bg-green-700 transition">Unban User</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    
+    <!-- Active Bans Section -->
+    <div class="bg-white rounded-xl shadow-md p-6">
+      <h2 class="text-xl font-bold text-[#1f1d79] mb-4">Active Bans</h2>
+      
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expires</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created By</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="bans-table-body" class="bg-white divide-y divide-gray-200">
+            <!-- Bans will be loaded here -->
+            <tr>
+              <td colspan="5" class="px-6 py-4 text-center text-gray-500">Loading bans...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <div id="no-bans-message" class="text-center py-4 text-gray-500 hidden">
+        No active bans found.
+      </div>
+    </div>
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Check if user is logged in
+      const userToken = localStorage.getItem('userToken');
+      const userEmail = localStorage.getItem('userEmail');
+      
+      if (!userToken || !userEmail) {
+        window.location.href = 'signin.html';
+        return;
+      }
+      
+      // Check if user is admin
+      fetch(`/api/user/profile?email=${encodeURIComponent(userEmail)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (!data.isAdmin) {
+            window.location.href = 'index.html';
+            alert('You do not have permission to access the admin dashboard.');
+            return;
+          }
+          
+          // Display user info
+          const userInfo = document.getElementById('user-info');
+          const userName = document.getElementById('user-name');
+          const userAvatar = document.getElementById('user-avatar');
+          
+          if (userInfo && userName && userAvatar) {
+            userInfo.classList.remove('hidden');
+            userName.textContent = localStorage.getItem('userName') || userEmail;
+            
+            const avatar = localStorage.getItem('userAvatar');
+            if (avatar) {
+              userAvatar.src = avatar;
+            }
+          }
+          
+          // Load active bans
+          loadActiveBans();
+        })
+        .catch(error => {
+          console.error('Error checking admin status:', error);
+          window.location.href = 'index.html';
+        });
+      
+      // Ban user form submission
+      const banUserForm = document.getElementById('ban-user-form');
+      if (banUserForm) {
+        banUserForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          
+          const targetEmail = document.getElementById('target-email').value;
+          const reason = document.getElementById('ban-reason').value;
+          const duration = document.getElementById('ban-duration').value;
+          
+          fetch('/api/admin/ban', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              adminEmail: userEmail,
+              targetEmail,
+              reason,
+              duration
+            })
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              alert(data.message);
+              banUserForm.reset();
+              loadActiveBans();
+            } else {
+              alert('Error: ' + (data.error || 'Failed to ban user'));
+            }
+          })
+          .catch(error => {
+            console.error('Error banning user:', error);
+            alert('An error occurred. Please try again later.');
+          });
+        });
+      }
+      
+      // Unban user form submission
+      const unbanUserForm = document.getElementById('unban-user-form');
+      if (unbanUserForm) {
+        unbanUserForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          
+          const targetEmail = document.getElementById('unban-email').value;
+          
+          fetch('/api/admin/unban', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              adminEmail: userEmail,
+              targetEmail
+            })
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              alert(data.message);
+              unbanUserForm.reset();
+              loadActiveBans();
+            } else {
+              alert('Error: ' + (data.error || 'Failed to unban user'));
+            }
+          })
+          .catch(error => {
+            console.error('Error unbanning user:', error);
+            alert('An error occurred. Please try again later.');
+          });
+        });
+      }
+      
+      // Logout functionality
+      document.getElementById('logout-btn').addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        // Clear local storage
+        localStorage.removeItem('userToken');
+        localStorage.removeItem('userEmail');
+        localStorage.removeItem('userName');
+        localStorage.removeItem('userAvatar');
+        localStorage.removeItem('userUsername');
+        localStorage.removeItem('userSubscription');
+        localStorage.removeItem('userSubscriptionExpiry');
+        
+        // Redirect to signin
+        window.location.href = 'signin.html';
+      });
+      
+      // Function to load active bans
+      function loadActiveBans() {
+        const bansTableBody = document.getElementById('bans-table-body');
+        const noBansMessage = document.getElementById('no-bans-message');
+        
+        if (!bansTableBody || !noBansMessage) return;
+        
+        fetch(`/api/admin/bans?adminEmail=${encodeURIComponent(userEmail)}`)
+          .then(res => res.json())
+          .then(data => {
+            const bans = data.bans || [];
+            
+            // Filter active bans
+            const now = new Date();
+            const activeBans = bans.filter(ban => {
+              const banExpiry = ban.expiresAt ? new Date(ban.expiresAt) : null;
+              return !banExpiry || banExpiry > now;
+            });
+            
+            if (activeBans.length === 0) {
+              bansTableBody.innerHTML = '';
+              noBansMessage.classList.remove('hidden');
+              return;
+            }
+            
+            noBansMessage.classList.add('hidden');
+            bansTableBody.innerHTML = '';
+            
+            // Render active bans
+            activeBans.forEach(ban => {
+              const tr = document.createElement('tr');
+              
+              // Format expiry date
+              let expiryText = 'Permanent';
+              if (ban.expiresAt) {
+                const expiryDate = new Date(ban.expiresAt);
+                expiryText = expiryDate.toLocaleString();
+              }
+              
+              tr.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm font-medium text-gray-900">${ban.email}</div>
+                </td>
+                <td class="px-6 py-4">
+                  <div class="text-sm text-gray-900">${ban.reason}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm text-gray-900">${expiryText}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm text-gray-900">${ban.createdBy}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <button class="unban-btn text-green-600 hover:text-green-900" data-email="${ban.email}">Unban</button>
+                </td>
+              `;
+              
+              bansTableBody.appendChild(tr);
+            });
+            
+            // Add event listeners to unban buttons
+            document.querySelectorAll('.unban-btn').forEach(button => {
+              button.addEventListener('click', function() {
+                const targetEmail = this.getAttribute('data-email');
+                
+                fetch('/api/admin/unban', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                    adminEmail: userEmail,
+                    targetEmail
+                  })
+                })
+                .then(res => res.json())
+                .then(data => {
+                  if (data.success) {
+                    alert(data.message);
+                    loadActiveBans();
+                  } else {
+                    alert('Error: ' + (data.error || 'Failed to unban user'));
+                  }
+                })
+                .catch(error => {
+                  console.error('Error unbanning user:', error);
+                  alert('An error occurred. Please try again later.');
+                });
+              });
+            });
+          })
+          .catch(error => {
+            console.error('Error loading bans:', error);
+            bansTableBody.innerHTML = `
+              <tr>
+                <td colspan="5" class="px-6 py-4 text-center text-red-500">Error loading bans. Please try again later.</td>
+              </tr>
+            `;
+          });
+      }
+    });
+  </script>
+</body>
+</html>

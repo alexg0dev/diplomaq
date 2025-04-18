@@ -12,6 +12,7 @@ const { Pool } = require("pg")
 const requestIp = require("request-ip")
 const cookieParser = require("cookie-parser")
 
+// Load environment variables
 dotenv.config()
 
 // Import custom JS files
@@ -32,14 +33,14 @@ try {
 const app = express()
 const PORT = process.env.PORT || 3000
 
-// Google OAuth configuration
+// Google OAuth configuration with hardcoded credentials
 const GOOGLE_CLIENT_ID = "741864469861-v3jmuek30cf8pvhdgd27d100nmpt4ot7.apps.googleusercontent.com"
-const GOOGLE_CLIENT_SECRET = "GOCSPX-Ow-Iy-Iy-Iy-Iy-Iy-Iy-Iy-Iy-Iy-Iy" // Replace with your actual client secret
-const JWT_SECRET = "diplomaq-secret-key" // Replace with a strong secret in production
-const REDIRECT_URI = "https://diplomaq-production.up.railway.app/api/auth/callback/google"
-const FRONTEND_URL = "https://diplomaq-production.up.railway.app"
+const GOOGLE_CLIENT_SECRET = "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"
+const JWT_SECRET = "diplomaq-secret-key" // Hardcoded JWT secret
+const REDIRECT_URI = "https://diplomaq-production.up.railway.app/api/auth/callback/google" // Hardcoded redirect URI
+const FRONTEND_URL = "https://diplomaq-production.up.railway.app" // Hardcoded frontend URL
 
-// Initialize Google OAuth2 client
+// Initialize Google OAuth2 client with the correct configuration
 const googleClient = new OAuth2Client({
   clientId: GOOGLE_CLIENT_ID,
   clientSecret: GOOGLE_CLIENT_SECRET,
@@ -49,11 +50,11 @@ const googleClient = new OAuth2Client({
 // Admin emails with ban permissions
 const ADMIN_EMAILS = ["alexandroghanem@gmail.com", "alexandroghanem1@gmail.com"]
 
-// Initialize Pusher
+// Initialize Pusher using environment variables
 const pusher = new Pusher({
-  appId: process.env.PUSHER_APP_ID || "1723394",
-  key: process.env.PUSHER_KEY || "6a59bdd1f5df05fd2554",
-  secret: process.env.PUSHER_SECRET || "a7a5c1c3a6a1a1a1a1a1",
+  appId: process.env.PUSHER_APP_ID,
+  key: process.env.PUSHER_KEY,
+  secret: process.env.PUSHER_SECRET,
   cluster: process.env.PUSHER_CLUSTER || "eu",
   useTLS: true,
 })
@@ -2093,7 +2094,7 @@ app.get("/health", (req, res) => {
 const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
   console.log(`Visit http://localhost:${PORT} to view the application`)
-  console.log(`Ko-fi webhook endpoint: http://localhost:${PORT}/api/kofi/webhook`)
+  console.log(`Google OAuth configured with Client ID: ${GOOGLE_CLIENT_ID.substring(0, 10)}...`)
 })
 
 // Handle graceful shutdown

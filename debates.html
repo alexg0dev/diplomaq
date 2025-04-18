@@ -5,9 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Debates - Diplomaq.lol</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
-  <script src="https://js.pusher.com/7.0/pusher.min.js"></script>
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
   <style>
     :root {
       --primary: #1f1d79;
@@ -49,9 +52,10 @@
     }
     
     .glass-nav {
-      background-color: rgba(255, 255, 255, 0.8);
+      background: rgba(255, 255, 255, 0.9);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(229, 231, 235, 0.5);
     }
     
     .debate-card {
@@ -163,10 +167,61 @@
     .tab-content.active {
       display: block;
     }
+    
+    /* Dropdown styles */
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      background-color: white;
+      min-width: 200px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      z-index: 1;
+      overflow: hidden;
+      transform-origin: top center;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    
+    .dropdown.active .dropdown-content {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+    
+    /* Vote system */
+    .vote-button {
+      transition: all 0.2s ease;
+    }
+    
+    .vote-button:hover {
+      transform: scale(1.1);
+    }
+    
+    .vote-button.voted {
+      background-color: #1f1d79;
+      color: white;
+    }
+    
+    .vote-count {
+      font-weight: bold;
+      transition: all 0.3s ease;
+    }
+    
+    .vote-count.highlight {
+      color: #ff6309;
+      transform: scale(1.2);
+    }
   </style>
 </head>
 <body>
-  <!-- Navigation -->
+  <!-- Navigation - Matching index.html -->
   <nav class="glass-nav shadow-md sticky top-0 z-50 transition-all duration-300">
     <div class="container mx-auto px-4 py-3">
       <div class="flex justify-between items-center">
@@ -187,8 +242,55 @@
           </a>
         </div>
         <div class="hidden md:flex space-x-6">
+          <!-- Enhanced Navigation Links with Dropdowns -->
           <a href="index.html" class="text-gray-600 hover:text-[#1f1d79] transition">Home</a>
-          <a href="debates.html" class="text-[#1f1d79] font-medium transition">Debates</a>
+          
+          <div class="dropdown" id="debates-dropdown">
+            <a href="#" class="text-[#1f1d79] font-medium transition flex items-center">
+              Debates
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </a>
+            <div class="dropdown-content mt-2">
+              <a href="#" class="block px-4 py-3 hover:bg-gray-50 transition border-b border-gray-100">
+                <div class="font-medium text-[#1f1d79]">Live Debates</div>
+                <div class="text-xs text-gray-500">Join ongoing discussions</div>
+              </a>
+              <a href="#" class="block px-4 py-3 hover:bg-gray-50 transition border-b border-gray-100">
+                <div class="font-medium text-[#1f1d79]">Scheduled Debates</div>
+                <div class="text-xs text-gray-500">Upcoming debate sessions</div>
+              </a>
+              <a href="#" class="block px-4 py-3 hover:bg-gray-50 transition">
+                <div class="font-medium text-[#1f1d79]">Create Debate</div>
+                <div class="text-xs text-gray-500">Start your own discussion</div>
+              </a>
+            </div>
+          </div>
+          
+          <div class="dropdown" id="mun-dropdown">
+            <a href="#" class="text-gray-600 hover:text-[#1f1d79] transition flex items-center">
+              Diplomacy
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </a>
+            <div class="dropdown-content mt-2">
+              <a href="#" class="block px-4 py-3 hover:bg-gray-50 transition border-b border-gray-100">
+                <div class="font-medium text-[#c75495]">Global Affairs</div>
+                <div class="text-xs text-gray-500">International relations simulation</div>
+              </a>
+              <a href="#" class="block px-4 py-3 hover:bg-gray-50 transition border-b border-gray-100">
+                <div class="font-medium text-[#c75495]">Crisis Management</div>
+                <div class="text-xs text-gray-500">Respond to global challenges</div>
+              </a>
+              <a href="#" class="block px-4 py-3 hover:bg-gray-50 transition">
+                <div class="font-medium text-[#c75495]">Model UN</div>
+                <div class="text-xs text-gray-500">MUN experience</div>
+              </a>
+            </div>
+          </div>
+          
           <a href="profile.html" class="text-gray-600 hover:text-[#1f1d79] transition">Profile</a>
         </div>
         <div>
@@ -220,17 +322,16 @@
           </button>
         </div>
       </div>
+      
+      <!-- Mobile menu -->
+      <div id="mobile-menu" class="md:hidden hidden mt-4 animate__animated animate__fadeIn">
+        <a href="index.html" class="block py-2 text-gray-600 hover:text-[#1f1d79] transition">Home</a>
+        <a href="#" class="block py-2 text-[#1f1d79] font-medium transition">Debates</a>
+        <a href="#" class="block py-2 text-gray-600 hover:text-[#1f1d79] transition">Diplomacy</a>
+        <a href="profile.html" class="block py-2 text-gray-600 hover:text-[#1f1d79] transition">Profile</a>
+      </div>
     </div>
   </nav>
-  
-  <!-- Mobile menu -->
-  <div id="mobile-menu" class="hidden md:hidden bg-white shadow-lg rounded-b-lg animate__animated animate__fadeIn">
-    <div class="px-4 py-3 space-y-2">
-      <a href="index.html" class="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-[#1f1d79] transition">Home</a>
-      <a href="debates.html" class="block px-3 py-2 rounded-md text-[#1f1d79] font-medium bg-gray-100 transition">Debates</a>
-      <a href="profile.html" class="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-[#1f1d79] transition">Profile</a>
-    </div>
-  </div>
   
   <!-- Main Content -->
   <main class="container mx-auto px-4 py-8">
@@ -240,49 +341,133 @@
       <p class="text-gray-600">Join or create debates on global issues and practice your diplomatic skills</p>
     </div>
     
-    <!-- Filter Section -->
-    <div class="bg-white rounded-xl shadow-md p-6 mb-8">
-      <div class="flex flex-col md:flex-row gap-4">
-        <div class="flex-1">
-          <label for="topic-filter" class="block text-sm font-medium text-gray-700 mb-1">Filter by Topic</label>
-          <input type="text" id="topic-filter" placeholder="Search topics..." class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]">
+    <!-- Tabs -->
+    <div class="flex border-b border-gray-200 mb-8">
+      <div class="tab active" data-tab="debates">Active Debates</div>
+      <div class="tab" data-tab="matchmaking">Matchmaking</div>
+    </div>
+    
+    <!-- Tab Content -->
+    <div id="debates-tab" class="tab-content active">
+      <!-- Auth Check -->
+      <div id="auth-check" class="bg-white rounded-xl shadow-md p-8 text-center mb-8 hidden">
+        <h2 class="text-2xl font-bold text-[#1f1d79] mb-4">Sign In to Join Debates</h2>
+        <p class="text-gray-600 mb-6">You need to sign in to join debates and participate in discussions.</p>
+        <a href="signin.html" class="px-6 py-3 gradient-button text-white font-semibold rounded-md">Sign In</a>
+      </div>
+      
+      <!-- Filter Section -->
+      <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+        <div class="flex flex-col md:flex-row gap-4">
+          <div class="flex-1">
+            <label for="topic-filter" class="block text-sm font-medium text-gray-700 mb-1">Filter by Topic</label>
+            <input type="text" id="topic-filter" placeholder="Search topics..." class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]">
+          </div>
+          <div>
+            <label for="council-filter" class="block text-sm font-medium text-gray-700 mb-1">Council</label>
+            <select id="council-filter" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]">
+              <option value="all">All Councils</option>
+              <option value="UNSC">UN Security Council (UNSC)</option>
+              <option value="UNGA">UN General Assembly (UNGA)</option>
+              <option value="UNHRC">UN Human Rights Council (UNHRC)</option>
+            </select>
+          </div>
+          <div class="self-end">
+            <button id="apply-filters-btn" class="px-6 py-2 gradient-button text-white font-semibold rounded-md">Apply Filters</button>
+          </div>
         </div>
-        <div>
-          <label for="status-filter" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-          <select id="status-filter" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]">
-            <option value="all">All Debates</option>
-            <option value="active" selected>Active</option>
-            <option value="scheduled">Scheduled</option>
+      </div>
+      
+      <!-- Debates List -->
+      <div id="debates-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Debates will be loaded here -->
+        <div class="flex justify-center items-center col-span-full py-12">
+          <div class="spinner"></div>
+        </div>
+      </div>
+      
+      <!-- Create Debate Button -->
+      <div class="fixed bottom-6 right-6">
+        <button id="create-debate-btn" class="gradient-button text-white font-semibold rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:shadow-xl">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Matchmaking Tab -->
+    <div id="matchmaking-tab" class="tab-content">
+      <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+        <h2 class="text-2xl font-bold text-[#1f1d79] mb-4">Find a Debate Partner</h2>
+        <p class="text-gray-600 mb-6">Get matched with another user to start a debate on a topic of your choice.</p>
+        
+        <!-- Matchmaking Form -->
+        <div id="matchmaking-form" class="space-y-6">
+          <div>
+            <label for="council-select" class="block text-sm font-medium text-gray-700 mb-1">Select Council</label>
+            <select id="council-select" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]">
+              <option value="">-- Select Council --</option>
+              <option value="UNSC">UN Security Council (UNSC)</option>
+              <option value="UNGA">UN General Assembly (UNGA)</option>
+              <option value="UNHRC">UN Human Rights Council (UNHRC)</option>
+            </select>
+          </div>
+          
+          <div>
+            <label for="topic-select" class="block text-sm font-medium text-gray-700 mb-1">Select Topic (Optional)</label>
+            <input type="text" id="topic-select" placeholder="Enter a topic..." class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]">
+            <p class="text-sm text-gray-500 mt-1">If you don't select a topic, you'll be matched with anyone in the same council.</p>
+          </div>
+          
+          <div>
+            <button id="join-queue-btn" class="w-full py-3 gradient-button text-white font-semibold rounded-md">Join Queue</button>
+          </div>
+        </div>
+        
+        <!-- Queue Status -->
+        <div id="queue-status" class="hidden space-y-6">
+          <div class="bg-blue-50 border border-blue-200 rounded-md p-4">
+            <h3 class="text-lg font-semibold text-blue-800 mb-2">You're in the Queue</h3>
+            <p class="text-blue-700">
+              You are position <span id="queue-position" class="font-bold">1</span> of <span id="queue-size" class="font-bold">1</span> in the queue for <span id="queue-council" class="font-bold">UNSC</span>.
+            </p>
+            <p class="text-blue-700 mt-2">We'll notify you when a match is found.</p>
+            <div class="mt-4">
+              <div class="w-full bg-blue-200 rounded-full h-2">
+                <div id="queue-timer" class="bg-blue-600 h-2 rounded-full" style="width: 100%"></div>
+              </div>
+              <p class="text-xs text-blue-600 mt-1">Matchmaking will timeout in <span id="queue-time-left">5:00</span></p>
+            </div>
+          </div>
+          
+          <div>
+            <button id="leave-queue-btn" class="w-full py-3 border border-red-500 text-red-500 font-semibold rounded-md hover:bg-red-500 hover:text-white transition">Leave Queue</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- AI Debate Option -->
+      <div class="bg-white rounded-xl shadow-md p-8">
+        <h2 class="text-2xl font-bold text-[#1f1d79] mb-4">Practice with AI</h2>
+        <p class="text-gray-600 mb-6">Can't find a match? Practice your debating skills with our AI diplomat.</p>
+        
+        <div class="flex flex-col md:flex-row gap-4">
+          <select id="ai-council-select" class="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]">
+            <option value="">-- Select Council --</option>
+            <option value="UNSC">UN Security Council (UNSC)</option>
+            <option value="UNGA">UN General Assembly (UNGA)</option>
+            <option value="UNHRC">UN Human Rights Council (UNHRC)</option>
           </select>
+          
+          <button id="start-ai-debate-btn" class="px-6 py-2 gradient-button text-white font-semibold rounded-md">Start AI Debate</button>
         </div>
-        <div class="self-end">
-          <button id="apply-filters-btn" class="px-6 py-2 gradient-button text-white font-semibold rounded-md">Apply Filters</button>
+        
+        <div id="ai-subscription-notice" class="mt-4 text-sm text-gray-500">
+          <p>AI debates are available to Pro, Elite, and Institutional subscribers only.</p>
+          <a href="subscriptions.html" class="text-[#1f1d79] hover:underline">Upgrade your subscription</a>
         </div>
       </div>
-    </div>
-    
-    <!-- Auth Check -->
-    <div id="auth-check" class="bg-white rounded-xl shadow-md p-8 text-center mb-8 hidden">
-      <h2 class="text-2xl font-bold text-[#1f1d79] mb-4">Sign In to Join Debates</h2>
-      <p class="text-gray-600 mb-6">You need to sign in to join debates and participate in discussions.</p>
-      <a href="signin.html" class="px-6 py-3 gradient-button text-white font-semibold rounded-md">Sign In</a>
-    </div>
-    
-    <!-- Debates List -->
-    <div id="debates-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <!-- Debates will be loaded here -->
-      <div class="flex justify-center items-center col-span-full py-12">
-        <div class="spinner"></div>
-      </div>
-    </div>
-    
-    <!-- Create Debate Button -->
-    <div class="fixed bottom-6 right-6">
-      <button id="create-debate-btn" class="gradient-button text-white font-semibold rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:shadow-xl">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-        </svg>
-      </button>
     </div>
   </main>
   
@@ -321,7 +506,7 @@
         
         <div>
           <label for="debate-topic" class="block text-sm font-medium text-gray-700 mb-1">Topic</label>
-          <input type="text" id="debate-topic" name="topic" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]" placeholder="e.g., Climate Change, Nuclear Disarmament, Human Rights">
+          <input type="text" id="debate-topic" name="topic" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2   required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]" placeholder="e.g., Climate Change, Nuclear Disarmament, Human Rights">
         </div>
         
         <div class="pt-4">
@@ -359,6 +544,15 @@
         <h4 class="text-lg font-semibold mb-2">Participants</h4>
         <div id="debate-view-participants" class="flex flex-wrap gap-2">
           <!-- Participants will be loaded here -->
+        </div>
+      </div>
+      
+      <!-- Voting Section -->
+      <div id="debate-voting-section" class="border-t border-gray-200 pt-4 mb-4 hidden">
+        <h4 class="text-lg font-semibold mb-2">Vote for Winner</h4>
+        <p class="text-sm text-gray-600 mb-3">Who made the most compelling arguments in this debate?</p>
+        <div id="voting-options" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Voting options will be loaded here -->
         </div>
       </div>
       
@@ -427,6 +621,13 @@
   
   <script>
     document.addEventListener('DOMContentLoaded', function() {
+      // Initialize AOS
+      AOS.init({
+        duration: 800,
+        easing: 'ease-in-out',
+        once: true
+      });
+      
       // Check if user is logged in
       const userToken = localStorage.getItem('userToken');
       const userEmail = localStorage.getItem('userEmail');
@@ -499,6 +700,56 @@
       
       mobileMenuButton.addEventListener('click', function() {
         mobileMenu.classList.toggle('hidden');
+      });
+      
+      // Dropdown functionality
+      const dropdowns = document.querySelectorAll('.dropdown');
+      
+      // For desktop - click to toggle
+      dropdowns.forEach(dropdown => {
+        const trigger = dropdown.querySelector('a');
+        if (trigger) {
+          trigger.addEventListener('click', function(e) {
+            // First prevent the default behavior to avoid navigation
+            e.preventDefault();
+            
+            // Close all other dropdowns
+            dropdowns.forEach(d => {
+              if (d !== dropdown) {
+                d.classList.remove('active');
+              }
+            });
+            
+            // Toggle current dropdown
+            dropdown.classList.toggle('active');
+            e.stopPropagation();
+          });
+        }
+      });
+      
+      // Close dropdowns when clicking elsewhere
+      document.addEventListener('click', function() {
+        dropdowns.forEach(dropdown => {
+          dropdown.classList.remove('active');
+        });
+      });
+      
+      // Tab switching
+      const tabs = document.querySelectorAll('.tab');
+      const tabContents = document.querySelectorAll('.tab-content');
+      
+      tabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+          const tabId = this.getAttribute('data-tab');
+          
+          // Remove active class from all tabs and tab contents
+          tabs.forEach(t => t.classList.remove('active'));
+          tabContents.forEach(c => c.classList.remove('active'));
+          
+          // Add active class to clicked tab and corresponding content
+          this.classList.add('active');
+          document.getElementById(`${tabId}-tab`).classList.add('active');
+        });
       });
       
       // Load debates
@@ -679,13 +930,201 @@
         });
       });
       
+      // Matchmaking functionality
+      const joinQueueBtn = document.getElementById('join-queue-btn');
+      const leaveQueueBtn = document.getElementById('leave-queue-btn');
+      const matchmakingForm = document.getElementById('matchmaking-form');
+      const queueStatus = document.getElementById('queue-status');
+      
+      joinQueueBtn.addEventListener('click', function() {
+        if (!userToken || !userEmail) {
+          alert('Please sign in to join the matchmaking queue.');
+          window.location.href = 'signin.html';
+          return;
+        }
+        
+        const council = document.getElementById('council-select').value;
+        const topic = document.getElementById('topic-select').value;
+        
+        if (!council) {
+          alert('Please select a council.');
+          return;
+        }
+        
+        // Disable button
+        joinQueueBtn.disabled = true;
+        joinQueueBtn.innerHTML = '<span class="spinner inline-block mr-2"></span> Joining...';
+        
+        // Join queue
+        fetch('/api/matchmaking/join', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            email: userEmail,
+            council,
+            topic
+          })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            // Hide form and show queue status
+            matchmakingForm.classList.add('hidden');
+            queueStatus.classList.remove('hidden');
+            
+            // Update queue info
+            document.getElementById('queue-council').textContent = council;
+            
+            // Start queue timer (5 minutes)
+            startQueueTimer(5 * 60);
+            
+            // If already matched, open the debate
+            if (data.matched && data.debate) {
+              openDebateView(data.debate);
+            } else {
+              // Check queue status periodically
+              checkQueueStatus();
+            }
+          } else {
+            alert('Error: ' + (data.error || 'Failed to join queue'));
+            
+            // Re-enable button
+            joinQueueBtn.disabled = false;
+            joinQueueBtn.innerHTML = 'Join Queue';
+          }
+        })
+        .catch(error => {
+          console.error('Error joining queue:', error);
+          alert('An error occurred. Please try again later.');
+          
+          // Re-enable button
+          joinQueueBtn.disabled = false;
+          joinQueueBtn.innerHTML = 'Join Queue';
+        });
+      });
+      
+      leaveQueueBtn.addEventListener('click', function() {
+        // Leave queue
+        fetch('/api/matchmaking/leave', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            email: userEmail
+          })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            // Show form and hide queue status
+            matchmakingForm.classList.remove('hidden');
+            queueStatus.classList.add('hidden');
+            
+            // Reset form
+            document.getElementById('council-select').value = '';
+            document.getElementById('topic-select').value = '';
+            
+            // Re-enable join button
+            joinQueueBtn.disabled = false;
+            joinQueueBtn.innerHTML = 'Join Queue';
+            
+            // Clear queue timer
+            clearQueueTimer();
+          } else {
+            alert('Error: ' + (data.error || 'Failed to leave queue'));
+          }
+        })
+        .catch(error => {
+          console.error('Error leaving queue:', error);
+          alert('An error occurred. Please try again later.');
+        });
+      });
+      
+      // Queue timer variables
+      let queueTimerInterval;
+      let queueTimeLeft;
+      
+      // Start queue timer
+      function startQueueTimer(seconds) {
+        queueTimeLeft = seconds;
+        updateQueueTimer();
+        
+        queueTimerInterval = setInterval(() => {
+          queueTimeLeft--;
+          updateQueueTimer();
+          
+          if (queueTimeLeft <= 0) {
+            clearInterval(queueTimerInterval);
+            
+            // Auto-leave queue after timeout
+            leaveQueueBtn.click();
+            alert('Matchmaking timed out. Please try again.');
+          }
+        }, 1000);
+      }
+      
+      // Update queue timer display
+      function updateQueueTimer() {
+        const minutes = Math.floor(queueTimeLeft / 60);
+        const seconds = queueTimeLeft % 60;
+        document.getElementById('queue-time-left').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        // Update progress bar
+        const percentage = (queueTimeLeft / (5 * 60)) * 100;
+        document.getElementById('queue-timer').style.width = `${percentage}%`;
+      }
+      
+      // Clear queue timer
+      function clearQueueTimer() {
+        clearInterval(queueTimerInterval);
+      }
+      
+      // Check queue status
+      function checkQueueStatus() {
+        fetch(`/api/matchmaking/status?email=${encodeURIComponent(userEmail)}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.inQueue) {
+              // Update queue position
+              document.getElementById('queue-position').textContent = data.queuePosition;
+              document.getElementById('queue-size').textContent = data.queueSize;
+              
+              // Check again in 5 seconds
+              setTimeout(checkQueueStatus, 5000);
+            } else if (data.matched && data.debate) {
+              // Clear queue timer
+              clearQueueTimer();
+              
+              // Open the debate
+              openDebateView(data.debate);
+              
+              // Show form and hide queue status
+              matchmakingForm.classList.remove('hidden');
+              queueStatus.classList.add('hidden');
+              
+              // Re-enable join button
+              joinQueueBtn.disabled = false;
+              joinQueueBtn.innerHTML = 'Join Queue';
+            }
+          })
+          .catch(error => {
+            console.error('Error checking queue status:', error);
+            
+            // Check again in 5 seconds
+            setTimeout(checkQueueStatus, 5000);
+          });
+      }
+      
       // Functions
       function loadDebates() {
         const debatesList = document.getElementById('debates-list');
         
         // Get filter values
         const topicFilter = document.getElementById('topic-filter').value.toLowerCase();
-        const statusFilter = document.getElementById('status-filter').value;
+        const councilFilter = document.getElementById('council-filter').value;
         
         // Show loading spinner
         debatesList.innerHTML = `
@@ -701,8 +1140,8 @@
             // Filter debates
             let filteredDebates = data.debates;
             
-            if (statusFilter !== 'all') {
-              filteredDebates = filteredDebates.filter(debate => debate.status === statusFilter);
+            if (councilFilter !== 'all') {
+              filteredDebates = filteredDebates.filter(debate => debate.council === councilFilter);
             }
             
             if (topicFilter) {
@@ -820,10 +1259,16 @@
           
           // Check if user has access to AI features
           checkAIAccess();
+          
+          // Show voting section if there are at least 2 participants
+          if (debate.participants.length >= 2) {
+            setupVotingSection(debate);
+          }
         } else {
           // User is not a participant, show join button
           document.getElementById('debate-join-section').classList.remove('hidden');
           document.getElementById('debate-chat-section').classList.add('hidden');
+          document.getElementById('debate-voting-section').classList.add('hidden');
           
           // Set up join button
           const joinDebateBtn = document.getElementById('join-debate-btn');
@@ -882,6 +1327,11 @@
                 
                 // Check if user has access to AI features
                 checkAIAccess();
+                
+                // Show voting section if there are at least 2 participants
+                if (debate.participants.length >= 2) {
+                  setupVotingSection(debate);
+                }
               } else {
                 alert('Error: ' + (data.error || 'Failed to join debate'));
                 
@@ -1064,10 +1514,141 @@
                     </div>
                   `;
                 }).join('');
+                
+                // Show voting section if there are at least 2 participants
+                if (data.debate.participants.length >= 2) {
+                  setupVotingSection(data.debate);
+                }
               }
             })
             .catch(error => console.error('Error updating participants:', error));
         });
+        
+        // Listen for vote updates
+        channel.bind('vote-update', function(data) {
+          updateVoteCounts(data.votes);
+        });
+      }
+      
+      function setupVotingSection(debate) {
+        const votingSection = document.getElementById('debate-voting-section');
+        const votingOptions = document.getElementById('voting-options');
+        
+        // Show voting section
+        votingSection.classList.remove('hidden');
+        
+        // Render voting options
+        votingOptions.innerHTML = debate.participants
+          .filter(p => !p.isAI) // Filter out AI participants
+          .map(participant => {
+            return `
+              <div class="bg-white border border-gray-200 rounded-lg p-4 flex items-center justify-between">
+                <div class="flex items-center">
+                  <img src="${participant.avatar || '/placeholder.svg'}" alt="${participant.name}" class="w-10 h-10 rounded-full mr-3">
+                  <div>
+                    <div class="font-medium">${participant.username || participant.name}</div>
+                    <div class="text-xs text-gray-500">${participant.email}</div>
+                  </div>
+                </div>
+                <div class="flex items-center">
+                  <span class="vote-count mr-2" data-user-id="${participant.id}">0</span>
+                  <button class="vote-button p-2 rounded-full border border-gray-300 hover:bg-[#1f1d79] hover:text-white transition" data-user-id="${participant.id}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            `;
+          })
+          .join('');
+        
+        // Add event listeners to vote buttons
+        document.querySelectorAll('.vote-button').forEach(button => {
+          button.addEventListener('click', function() {
+            const userId = this.getAttribute('data-user-id');
+            const debateId = document.getElementById('debate-view-modal').getAttribute('data-debate-id');
+            
+            // Check if user has already voted
+            if (this.classList.contains('voted')) {
+              alert('You have already voted for this participant.');
+              return;
+            }
+            
+            // Submit vote
+            fetch(`/api/debates/${debateId}/vote`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                email: userEmail,
+                votedFor: userId
+              })
+            })
+            .then(res => res.json())
+            .then(data => {
+              if (data.success) {
+                // Mark this button as voted
+                document.querySelectorAll('.vote-button').forEach(btn => {
+                  btn.classList.remove('voted');
+                });
+                this.classList.add('voted');
+                
+                // Update vote counts
+                updateVoteCounts(data.votes);
+              } else {
+                alert('Error: ' + (data.error || 'Failed to submit vote'));
+              }
+            })
+            .catch(error => {
+              console.error('Error submitting vote:', error);
+              alert('An error occurred. Please try again later.');
+            });
+          });
+        });
+        
+        // Load current votes
+        const debateId = document.getElementById('debate-view-modal').getAttribute('data-debate-id');
+        fetch(`/api/debates/${debateId}/votes`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              // Update vote counts
+              updateVoteCounts(data.votes);
+              
+              // Mark user's vote if they've already voted
+              if (data.userVote) {
+                const voteButton = document.querySelector(`.vote-button[data-user-id="${data.userVote}"]`);
+                if (voteButton) {
+                  voteButton.classList.add('voted');
+                }
+              }
+            }
+          })
+          .catch(error => console.error('Error loading votes:', error));
+      }
+      
+      function updateVoteCounts(votes) {
+        // Reset all vote counts
+        document.querySelectorAll('.vote-count').forEach(count => {
+          count.textContent = '0';
+          count.classList.remove('highlight');
+        });
+        
+        // Update vote counts
+        for (const userId in votes) {
+          const voteCount = document.querySelector(`.vote-count[data-user-id="${userId}"]`);
+          if (voteCount) {
+            voteCount.textContent = votes[userId];
+            
+            // Highlight if votes changed
+            voteCount.classList.add('highlight');
+            setTimeout(() => {
+              voteCount.classList.remove('highlight');
+            }, 1000);
+          }
+        }
       }
       
       function checkAIAccess() {
@@ -1093,8 +1674,95 @@
           .catch(error => console.error('Error checking AI access:', error));
       }
       
+      // AI debate button
+      document.getElementById('start-ai-debate-btn').addEventListener('click', function() {
+        if (!userToken || !userEmail) {
+          alert('Please sign in to start an AI debate.');
+          window.location.href = 'signin.html';
+          return;
+        }
+        
+        const council = document.getElementById('ai-council-select').value;
+        
+        if (!council) {
+          alert('Please select a council.');
+          return;
+        }
+        
+        // Check if user has access to AI features
+        fetch(`/api/access/verify?email=${encodeURIComponent(userEmail)}&feature=debate-ai`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.hasAccess) {
+              // Create AI debate
+              this.disabled = true;
+              this.innerHTML = '<span class="spinner inline-block mr-2"></span> Creating...';
+              
+              fetch('/api/debates', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  title: `AI Practice: ${council}`,
+                  description: `Practice debate with AI on ${council} topics.`,
+                  council,
+                  topic: 'AI Practice',
+                  email: userEmail,
+                  isAIDebate: true
+                })
+              })
+              .then(res => res.json())
+              .then(data => {
+                if (data.success) {
+                  // Switch to debates tab
+                  document.querySelector('.tab[data-tab="debates"]').click();
+                  
+                  // Open the debate view
+                  openDebateView(data.debate);
+                  
+                  // Generate initial AI message
+                  setTimeout(() => {
+                    fetch(`/api/debates/${data.debate.id}/ai-message`, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json'
+                      },
+                      body: JSON.stringify({
+                        prompt: `Start a debate about ${council} topics`,
+                        email: userEmail
+                      })
+                    })
+                    .catch(error => console.error('Error generating initial AI message:', error));
+                  }, 1000);
+                } else {
+                  alert('Error: ' + (data.error || 'Failed to create AI debate'));
+                }
+                
+                this.disabled = false;
+                this.innerHTML = 'Start AI Debate';
+              })
+              .catch(error => {
+                console.error('Error creating AI debate:', error);
+                alert('An error occurred. Please try again later.');
+                
+                this.disabled = false;
+                this.innerHTML = 'Start AI Debate';
+              });
+            } else {
+              alert('AI debates are only available to Pro, Elite, and Institutional subscribers. Please upgrade your subscription.');
+            }
+          })
+          .catch(error => {
+            console.error('Error checking AI access:', error);
+            alert('An error occurred. Please try again later.');
+          });
+      });
+      
       // Function to check for curse words
       function containsCurseWords(text) {
+        if (!text) return false;
+        
         // Simple list of curse words to filter
         const curseWords = [
           'fuck', 'shit', 'ass', 'bitch', 'cunt', 'dick', 'pussy', 'cock', 'whore', 'slut',

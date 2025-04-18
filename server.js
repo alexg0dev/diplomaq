@@ -2218,3 +2218,342 @@ function filterCurseWords(text) {
 
   return filteredText
 }
+
+// Add these endpoints to the server.js file
+
+// Vote on a debate
+app.post("/api/debates/:id/vote", (req, res) => {
+  const { id } = req.params
+  const { email, votedFor } = req.body
+  const ip = req.clientIp
+
+  if (!email || !votedFor) {
+    return res.status(400).json({ error: "Email and votedFor are required" })
+  }
+
+  // Check if user is banned
+  const ban = isUserBanned(email, ip)
+  if (ban) {
+    return res.status(403).json({
+      error: "Account banned",
+      reason: ban.reason,
+      expiresAt: ban.expiresAt,
+      permanent: ban.permanent,
+    })
+  }
+
+  const data = readData()
+  const user = data.users.find((u) => u.email === email)
+
+  if (!user) {
+    return res.status(404).json({ error: "User not found" })
+  }
+
+  const debatesData = readDebates()
+  const debate = debatesData.debates.find((d) => d.id === id)
+
+  if (!debate) {
+    return res.status(404).json({ error: "Debate not found" })
+  }
+
+  // Check if user is a participant
+  if (!debate.participants.some((p) => p.email === email)) {
+    return res.status(403).json({ error: "You must join the debate to vote" })
+  }
+
+  // Initialize votes if not exists
+  if (!debate.votes) {
+    debate.votes = {}
+  }
+
+  // Initialize userVotes if not exists
+  if (!debate.userVotes) {
+    debate.userVotes = {}
+  }
+
+  // Check if user has already voted
+  const previousVote = debate.userVotes[user.id]
+  if (previousVote) {
+    // Remove previous vote
+    debate.votes[previousVote] = (debate.votes[previousVote] || 1) - 1
+  }
+
+  // Add new vote
+  debate.votes[votedFor] = (debate.votes[votedFor] || 0) + 1
+  debate.userVotes[user.id] = votedFor
+
+  // Save changes
+  writeDebates(debatesData)
+
+  // Trigger Pusher event for real-time updates
+  pusher.trigger(`debate-${id}`, "vote-update", {
+    votes: debate.votes,
+  })
+
+  res.json({
+    success: true,
+    votes: debate.votes,
+    userVote: votedFor,
+  })
+})
+
+// Get votes for a debate
+app.get("/api/debates/:id/votes", (req, res) => {
+  const { id } = req.params
+  const { email } = req.query
+
+  const debatesData = readDebates()
+  const debate = debatesData.debates.find((d) => d.id === id)
+
+  if (!debate) {
+    return res.status(404).json({ error: "Debate not found" })
+  }
+
+  // Initialize votes if not exists
+  if (!debate.votes) {
+    debate.votes = {}
+  }
+
+  // Initialize userVotes if not exists
+  if (!debate.userVotes) {
+    debate.userVotes = {}
+  }
+
+  // Get user's vote if email is provided
+  let userVote = null
+  if (email) {
+    const data = readData()
+    const user = data.users.find((u) => u.email === email)
+    if (user) {
+      userVote = debate.userVotes[user.id]
+    }
+  }
+
+  res.json({
+    success: true,
+    votes: debate.votes,
+    userVote,
+  })
+})
+
+// Fix the matchmaking functionality
+app.post("/api/matchmaking/join", (req, res) => {
+  const { email, council, topic } = req.body
+  const ip = req.clientIp
+
+  if (!email || !council) {
+    return res.status(400).json({ error: "Email and council are required" })
+  }
+
+  // Check if user is banned
+  const ban = isUserBanned(email, ip)
+  if (ban) {
+    return res.status(403).json({
+      error: "Account banned",
+      reason: ban.reason,
+      expiresAt: ban.expiresAt,
+      permanent: ban.permanent,
+    })
+  }
+
+  const data = readData()
+  const user = data.users.find((u) => u.email === email)
+
+  if (!user) {
+    return res.status(404).json({ error: "User not found" })
+  }
+
+  // Update IP if needed
+  if (user.lastIp !== ip) {
+    user.lastIp = ip
+    if (!user.ipHistory) {
+      user.ipHistory = []
+    }
+    user.ipHistory.push({ ip, timestamp: new Date().toISOString() })
+    writeData(data)
+  }
+
+  // Check if user can join more debates today
+  if (!canJoinMoreDebates(user)) {
+    return res.status(403).json({
+      error: "Daily debate limit reached",
+      limit:
+        user.subscription === "free" ? 8 : user.subscription === "pro" ? 20 : user.subscription === "elite" ? 50 : 100,
+    })
+  }
+
+  // Add user to matchmaking queue
+  const matchmakingData = readMatchmaking()
+
+  // Check if user is already in queue
+  const existingQueueEntry = matchmakingData.queue.find((entry) => entry.userId === user.id)
+  if (existingQueueEntry) {
+    return res.status(400).json({ error: "You are already in the matchmaking queue" })
+  }
+
+  // Add to queue
+  const queueEntry = {
+    userId: user.id,
+    email: user.email,
+    name: user.name,
+    username: user.username,
+    avatar: user.avatar,
+    council,
+    topic: topic || null,
+    joinedAt: new Date().toISOString(),
+    lastMatchAttempt: null, // Track last match attempt to avoid matching with same users
+    previousMatches: [], // Track previous matches to avoid matching with same users
+  }
+
+  matchmakingData.queue.push(queueEntry)
+  writeMatchmaking(matchmakingData)
+
+  // Try to find a match
+  const match = findMatchFixed(queueEntry, matchmakingData.queue)
+
+  if (match) {
+    // Create a new debate for the matched users
+    const debateId = crypto.randomUUID()
+    const newDebate = {
+      id: debateId,
+      title: match.topic || topic || `${match.council} Debate`,
+      description: `Matched debate on ${match.council}`,
+      council: match.council,
+      topic: match.topic || topic || "Matched Debate",
+      status: "active",
+      participants: [
+        {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          username: user.username,
+          avatar: user.avatar,
+          joinedAt: new Date().toISOString(),
+        },
+        {
+          id: match.userId,
+          email: match.email,
+          name: match.name,
+          username: match.username,
+          avatar: match.avatar,
+          joinedAt: new Date().toISOString(),
+        },
+      ],
+      isMatchmade: true,
+      createdAt: new Date().toISOString(),
+      startTime: new Date().toISOString(),
+      endTime: null,
+    }
+
+    // Update debates file
+    const debatesData = readDebates()
+    debatesData.debates.push(newDebate)
+    writeDebates(debatesData)
+
+    // Update user stats for both users
+    user.debatesJoined += 1
+    user.debatesJoinedToday = (user.debatesJoinedToday || 0) + 1
+    user.lastDebateJoinDate = new Date().toISOString()
+
+    // Track previous matches
+    if (!user.previousMatches) {
+      user.previousMatches = []
+    }
+    user.previousMatches.push({
+      userId: match.userId,
+      timestamp: new Date().toISOString(),
+    })
+
+    const matchedUser = data.users.find((u) => u.id === match.userId)
+    if (matchedUser) {
+      matchedUser.debatesJoined += 1
+      matchedUser.debatesJoinedToday = (matchedUser.debatesJoinedToday || 0) + 1
+      matchedUser.lastDebateJoinDate = new Date().toISOString()
+
+      // Track previous matches
+      if (!matchedUser.previousMatches) {
+        matchedUser.previousMatches = []
+      }
+      matchedUser.previousMatches.push({
+        userId: user.id,
+        timestamp: new Date().toISOString(),
+      })
+    }
+
+    writeData(data)
+
+    // Remove both users from queue
+    matchmakingData.queue = matchmakingData.queue.filter(
+      (entry) => entry.userId !== user.id && entry.userId !== match.userId,
+    )
+
+    // Add to matches
+    matchmakingData.matches.push({
+      debateId,
+      users: [user.id, match.userId],
+      council: match.council,
+      topic: match.topic || topic,
+      matchedAt: new Date().toISOString(),
+    })
+
+    writeMatchmaking(matchmakingData)
+
+    // Trigger Pusher events
+    pusher.trigger(`user-${user.id}`, "match-found", { debate: newDebate })
+    pusher.trigger(`user-${match.userId}`, "match-found", { debate: newDebate })
+    pusher.trigger("debates", "debate-created", { debate: newDebate })
+
+    res.json({
+      success: true,
+      matched: true,
+      debate: newDebate,
+    })
+  } else {
+    // No match found, user is in queue
+    res.json({
+      success: true,
+      matched: false,
+      message: "You've been added to the matchmaking queue. We'll notify you when a match is found.",
+    })
+  }
+})
+
+// Helper function to find a match
+function findMatchFixed(user, queue) {
+  // Filter out the current user
+  const potentialMatches = queue.filter((entry) => {
+    // Don't match with self
+    if (entry.userId === user.userId) return false
+
+    // Must be same council
+    if (entry.council !== user.council) return false
+
+    // Check if users have been matched before (avoid matching with same users)
+    if (user.previousMatches && user.previousMatches.some((match) => match.userId === entry.userId)) {
+      return false
+    }
+
+    // If both users specified a topic, they should match on topic
+    if (user.topic && entry.topic && user.topic !== entry.topic) {
+      return false
+    }
+
+    return true
+  })
+
+  if (potentialMatches.length === 0) {
+    return null
+  }
+
+  // If user specified a topic, try to match with someone who wants the same topic
+  if (user.topic) {
+    const topicMatch = potentialMatches.find((entry) => entry.topic === user.topic)
+    if (topicMatch) {
+      return topicMatch
+    }
+  }
+
+  // Otherwise, match with the user who has been waiting the longest
+  potentialMatches.sort((a, b) => new Date(a.joinedAt) - new Date(b.joinedAt))
+  return potentialMatches[0]
+}

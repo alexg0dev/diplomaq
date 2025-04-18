@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subscription Plans - Diplomaq.lol</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+  <style>
+    :root {
+      --primary: #1f1d79;
+      --primary-light: #a5bcda;
+      --secondary: #ff6309;
+      --secondary-light: #ff7c30;
+      --accent: #c75495;
+      --bg-cream: #fdfbf6;
+      --text-dark: #454545;
+    }
+    
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: #edf6e3;
+      color: var(--text-dark);
+      overflow-x: hidden;
+    }
+    
+    .gradient-bg {
+      background: linear-gradient(135deg, #1f1d79 0%, #005791 100%);
+    }
+    
+    .gradient-text {
+      background: linear-gradient(90deg, #1f1d79 0%, #c75495 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .gradient-button {
+      background: linear-gradient(90deg, #ff6309 0%, #ff7c30 100%);
+      transition: all 0.3s ease;
+    }
+    
+    .gradient-button:hover {
+      background: linear-gradient(90deg, #e86a00 0%, #f16a30 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(255, 99, 9, 0.2);
+    }
+    
+    /* Navbar glass effect */
+    .glass-nav {
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    
+    /* Dropdown styles */
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      background-color: white;
+      min-width: 200px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      z-index: 1;
+      overflow: hidden;
+      transform-origin: top center;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    
+    .dropdown.active .dropdown-content {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+    
+    /* Subscription cards */
+    .subscription-card {
+      border-radius: 12px;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+    
+    .subscription-card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 20px 30px rgba(0, 0, 0, 0.1);
+    }
+    
+    .subscription-card .header {
+      padding: 20px;
+      color: white;
+      font-weight: bold;
+    }
+    
+    .subscription-card .free-header {
+      background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+    }
+    
+    .subscription-card .pro-header {
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    }
+    
+    .subscription-card .elite-header {
+      background: linear-gradient(135deg, #818cf8 0%, #4f46e5 100%);
+    }
+    
+    .subscription-card .institutional-header {
+      background: linear-gradient(135deg, #c084fc 0%, #9333ea 100%);
+    }
+    
+    /* Feature comparison table */
+    .comparison-table {
+      border-collapse: separate;
+      border-spacing: 0;
+      width: 100%;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    
+    .comparison-table th,
+    .comparison-table td {
+      padding: 16px;
+      text-align: center;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .comparison-table th {
+      background-color: #f9fafb;
+      font-weight: 600;
+    }
+    
+    .comparison-table tr:last-child td {
+      border-bottom: none;
+    }
+    
+    .comparison-table td:first-child {
+      text-align: left;
+      font-weight: 500;
+    }
+    
+    /* FAQ accordion */
+    .faq-item {
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .faq-question {
+      cursor: pointer;
+      padding: 20px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+    
+    .faq-item.active .faq-answer {
+      max-height: 500px;
+      padding-bottom: 20px;
+    }
+    
+    .faq-icon {
+      transition: transform 0.3s ease;
+    }
+    
+    .faq-item.active .faq-icon {
+      transform: rotate(180deg);
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="glass-nav shadow-md sticky top-0 z-50 transition-all duration-300">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center space-x-2">
+          <a href="index.html" class="flex items-center">
+            <div class="relative">
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" class="animate__animated animate__fadeIn">
+                <circle cx="24" cy="24" r="18" fill="#1f1d79"/>
+                <path d="M24 6C14.0589 6 6 14.0589 6 24C6 33.9411 14.0589 42 24 42C33.9411 42 42 33.9411 42 24C42 14.0589 33.9411 6 24 6Z" fill="#1f1d79"/>
+                <path d="M18 18C18 16.0117 19.6117 14.4 21.6 14.4H26.4C28.3883 14.4 30 16.0117 30 18V30C30 31.9883 28.3883 33.6 26.4 33.6H21.6C19.6117 33.6 18 31.9883 18 30V18Z" fill="white"/>
+                <path d="M14.4 21.6C14.4 20.2745 15.4745 19.2 16.8 19.2C18.1255 19.2 19.2 20.2745 19.2 21.6V26.4C19.2 27.7255 18.1255 28.8 16.8 28.8C15.4745 28.8 14.4 27.7255 14.4 26.4V21.6Z" fill="white"/>
+                <path d="M28.8 21.6C28.8 20.2745 29.8745 19.2 31.2 19.2C32.5255 19.2 33.6 20.2745 33.6 21.6V26.4C33.6 27.7255 32.5255 28.8 31.2 28.8C29.8745 28.8 28.8 27.7255 28.8 26.4V21.6Z" fill="white"/>
+                <path d="M34 34L38 38M38 34L34 38" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+              <div class="absolute -bottom-1 -right-1 text-xs font-bold text-[#ff6309]">.lol</div>
+            </div>
+            <h1 class="text-2xl font-bold text-[#1f1d79] animate__animated animate__fadeIn">Diplomaq</h1>
+          </a>
+        </div>
+        <div class="hidden md:flex space-x-6">
+          <a href="index.html" class="text-gray-600 hover:text-[#1f1d79] transition">Home</a>
+          <a href="index.html#features" class="text-gray-600 hover:text-[#1f1d79] transition">Features</a>
+          <a href="index.html#debates" class="text-gray-600 hover:text-[#1f1d79] transition">Debates</a>
+          <a href="index.html#mun" class="text-gray-600 hover:text-[#1f1d79] transition">MUN</a>
+          <a href="index.html#learning" class="text-gray-600 hover:text-[#1f1d79] transition">Learning</a>
+          <a href="subscriptions.html" class="text-[#1f1d79] font-medium">Subscriptions</a>
+        </div>
+        <div>
+          <a href="index.html#login-section" class="px-4 py-2 border-2 border-[#1f1d79] text-[#1f1d79] font-medium rounded-md hover:bg-[#1f1d79] hover:text-white transition">Sign In</a>
+        </div>
+        <!-- Mobile menu button -->
+        <div class="md:hidden">
+          <button id="mobile-menu-button" class="p-2 rounded-md text-gray-600 hover:text-[#1f1d79] hover:bg-gray-100 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
+      </div>
+  <!-- Subscription Plans Section -->
+  <section class="py-20">
+    <div class="container mx-auto text-center">
+      <h2 class="text-4xl font-bold gradient-text mb-8 animate__animated animate__fadeInUp">Unlock Your Potential with Diplomaq.lol</h2>
+      <p class="text-lg text-gray-600 mb-12 animate__animated animate__fadeInUp">Choose the plan that best fits your needs and take your skills to the next level.</p>
+
+      <!-- Subscription Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+        <!-- Free Plan -->
+        <div class="subscription-card animate__animated animate__fadeInUp">
+          <div class="header free-header">
+            Free
+          </div>
+          <div class="p-6 bg-white">
+            <h3 class="text-2xl font-semibold text-gray-800 mb-4">Basic Access</h3>
+            <p class="text-gray-600 mb-6">Perfect for getting started and exploring the platform.</p>
+            <ul class="list-disc list-inside text-gray-600 mb-6">
+              <li>Access to limited debates</li>
+              <li>Basic learning resources</li>
+              <li>Community support</li>
+            </ul>
+            <a href="https://ko-fi.com/diplomaq/shop" target="_blank" class="w-full block text-center py-3 px-6 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition">
+              View All Plans
+            </a>
+          </div>
+        </div>
+
+        <!-- Pro Plan -->
+        <div class="subscription-card animate__animated animate__fadeInUp">
+          <div class="header pro-header">
+            Pro
+          </div>
+          <div class="p-6 bg-white">
+            <h3 class="text-2xl font-semibold text-gray-800 mb-4">Enhanced Learning</h3>
+            <p class="text-gray-600 mb-6">Unlock advanced features and premium content for serious learners.</p>
+            <ul class="list-disc list-inside text-gray-600 mb-6">
+              <li>Unlimited access to all debates</li>
+              <li>Advanced learning modules</li>
+              <li>Priority support</li>
+            </ul>
+            <a href="https://ko-fi.com/summary/2ffc84fb-a48c-48ba-affa-49b93332b565" target="_blank" class="w-full block text-center py-3 px-6 gradient-button rounded-lg text-white font-semibold">
+  Get Pro Membership
+</a>
+          </div>
+        </div>
+
+        <!-- Elite Plan -->
+        <div class="subscription-card animate__animated animate__fadeInUp">
+          <div class="header elite-header">
+            Elite
+          </div>
+          <div class="p-6 bg-white">
+            <h3 class="text-2xl font-semibold text-gray-800 mb-4">Expert Level</h3>
+            <p class="text-gray-600 mb-6">For those who demand the best: personalized coaching and exclusive content.</p>
+            <ul class="list-disc list-inside text-gray-600 mb-6">
+              <li>Everything in Pro, plus:</li>
+              <li>One-on-one coaching sessions</li>
+              <li>Exclusive expert content</li>
+            </ul>
+            <a href="https://ko-fi.com/diplomaq/shop" target="_blank" class="w-full block text-center py-3 px-6 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition">
+              View All Plans
+            </a>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Institutional Plan -->
+      <div class="subscription-card animate__animated animate__fadeInUp mt-8 md:mt-16">
+        <div class="header institutional-header">
+          Institutional
+        </div>
+        <div class="p-6 bg-white">
+          <h3 class="text-2xl font-semibold text-gray-800 mb-4">For Schools and Organizations</h3>
+          <p class="text-gray-600 mb-6">Tailored solutions for educational institutions and organizations.</p>
+          <ul class="list-disc list-inside text-gray-600 mb-6">
+            <li>Customized learning paths</li>
+            <li>Dedicated account manager</li>
+            <li>Scalable solutions for any size</li>
+          </ul>
+          <a href="https://ko-fi.com/diplomaq/shop" target="_blank" class="w-full block text-center py-3 px-6 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition">
+            View All Plans
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Feature Comparison Table -->
+  <section class="py-16 bg-gray-50">
+    <div class="container mx-auto">
+      <h2 class="text-3xl font-bold gradient-text text-center mb-8 animate__animated animate__fadeInUp">Compare Our Plans</h2>
+      <div class="overflow-x-auto animate__animated animate__fadeInUp">
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>Free</th>
+              <th>Pro</th>
+              <th>Elite</th>
+              <th>Institutional</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Access to Debates</td>
+              <td>Limited</td>
+              <td>Unlimited</td>
+              <td>Unlimited</td>
+              <td>Customized</td>
+            </tr>
+            <tr>
+              <td>Learning Resources</td>
+              <td>Basic</td>
+              <td>Advanced</td>
+              <td>Expert</td>
+              <td>Customized</td>
+            </tr>
+            <tr>
+              <td>Community Support</td>
+              <td>Yes</td>
+              <td>Priority</td>
+              <td>Priority</td>
+              <td>Dedicated Manager</td>
+            </tr>
+            <tr>
+              <td>One-on-One Coaching</td>
+              <td>No</td>
+              <td>No</td>
+              <td>Yes</td>
+              <td>Optional</td>
+            </tr>
+            <tr>
+              <td>Exclusive Content</td>
+              <td>No</td>
+              <td>No</td>
+              <td>Yes</td>
+              <td>Customized</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ Section -->
+  <section class="py-16">
+    <div class="container mx-auto">
+      <h2 class="text-3xl font-bold gradient-text text-center mb-8 animate__animated animate__fadeInUp">Frequently Asked Questions</h2>
+      <div class="max-w-3xl mx-auto animate__animated animate__fadeInUp">
+
+        <div class="faq-item">
+          <div class="faq-question" onclick="toggleFAQ(this)">
+            <span>What is Diplomaq.lol?</span>
+            <svg class="faq-icon w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </div>
+          <div class="faq-answer">
+            <p class="text-gray-700">Diplomaq.lol is an online platform dedicated to enhancing debate, Model United Nations (MUN), and learning skills. We offer a variety of resources, including debates, learning modules, and personalized coaching.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question" onclick="toggleFAQ(this)">
+            <span>How do I choose the right subscription plan?</span>
+            <svg class="faq-icon w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </div>
+          <div class="faq-answer">
+            <p class="text-gray-700">Consider your needs and goals. The Free plan is great for exploring the platform. The Pro plan offers enhanced learning. The Elite plan provides personalized coaching. The Institutional plan is for schools and organizations.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question" onclick="toggleFAQ(this)">
+            <span>Can I upgrade or downgrade my subscription?</span>
+            <svg class="faq-icon w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </div>
+          <div class="faq-answer">
+            <p class="text-gray-700">Yes, you can easily upgrade or downgrade your subscription at any time through your account settings.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-white py-8 border-t border-gray-200">
+    <div class="container mx-auto text-center">
+      <p class="text-gray-500">© 2024 Diplomaq.lol. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script>
+    function toggleFAQ(element) {
+      element.parentNode.classList.toggle('active');
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const mobileMenuButton = document.getElementById('mobile-menu-button');
+      const mobileMenu = document.getElementById('mobile-menu');
+
+      mobileMenuButton.addEventListener('click', function () {
+        mobileMenu.classList.toggle('hidden');
+      });
+    });
+  </script>
+
+<!-- Subscription Status Script -->
+<script>
+  // Function to check subscription status
+  async function checkSubscriptionStatus() {
+    // Check if user is logged in (has email in localStorage)
+    const userEmail = localStorage.getItem('userEmail');
+    if (!userEmail) {
+      console.log('User not logged in');
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/api/subscriptions/status?email=${encodeURIComponent(userEmail)}`);
+      const data = await response.json();
+      
+      if (response.ok) {
+        console.log('Subscription status:', data);
+        
+        // Update UI based on subscription status
+        const subscriptionBadge = document.getElementById('subscription-badge');
+        if (subscriptionBadge) {
+          subscriptionBadge.textContent = data.subscription.toUpperCase();
+          
+          // Add appropriate styling based on subscription
+          if (data.subscription === 'pro') {
+            subscriptionBadge.classList.add('bg-yellow-500');
+          } else if (data.subscription === 'elite') {
+            subscriptionBadge.classList.add('bg-indigo-500');
+          } else if (data.subscription === 'institutional') {
+            subscriptionBadge.classList.add('bg-purple-500');
+          }
+          
+          // Show expiry date if available
+          if (data.expiry) {
+            const expiryDate = new Date(data.expiry);
+            const expiryElement = document.createElement('div');
+            expiryElement.classList.add('text-xs', 'text-gray-500', 'mt-1');
+            expiryElement.textContent = `Expires: ${expiryDate.toLocaleDateString()}`;
+            subscriptionBadge.parentNode.appendChild(expiryElement);
+          }
+        }
+        
+        // Highlight current subscription plan
+        const subscriptionCards = document.querySelectorAll('.subscription-card');
+        subscriptionCards.forEach(card => {
+          const planType = card.getAttribute('data-plan');
+          if (planType === data.subscription) {
+            card.classList.add('ring-2', 'ring-blue-500');
+            const currentPlanBadge = document.createElement('div');
+            currentPlanBadge.classList.add('absolute', 'top-2', 'right-2', 'bg-blue-500', 'text-white', 'text-xs', 'px-2', 'py-1', 'rounded-full');
+            currentPlanBadge.textContent = 'Current Plan';
+            card.appendChild(currentPlanBadge);
+          }
+        });
+      } else {
+        console.error('Failed to fetch subscription status:', data.error);
+      }
+    } catch (error) {
+      console.error('Error checking subscription status:', error);
+    }
+  }
+  
+  // Check subscription status when page loads
+  document.addEventListener('DOMContentLoaded', function() {
+    checkSubscriptionStatus();
+    
+    // Add data-plan attributes to subscription cards if they don't exist
+    const freeCard = document.querySelector('.subscription-card .free-header')?.closest('.subscription-card');
+    const proCard = document.querySelector('.subscription-card .pro-header')?.closest('.subscription-card');
+    const eliteCard = document.querySelector('.subscription-card .elite-header')?.closest('.subscription-card');
+    const institutionalCard = document.querySelector('.subscription-card .institutional-header')?.closest('.subscription-card');
+    
+    if (freeCard) freeCard.setAttribute('data-plan', 'free');
+    if (proCard) proCard.setAttribute('data-plan', 'pro');
+    if (eliteCard) eliteCard.setAttribute('data-plan', 'elite');
+    if (institutionalCard) institutionalCard.setAttribute('data-plan', 'institutional');
+  });
+</script>
+</body>
+</html>

@@ -14,8 +14,18 @@ const requestIp = require("request-ip")
 dotenv.config()
 
 // Import custom JS files
-const matchmaking = require("./matchmaking.js")
-const animations = require("./animations.js")
+try {
+  const matchmaking = require("./matchmaking.js")
+
+  // Initialize matchmaking module if it has init function
+  if (typeof matchmaking.init === "function") {
+    matchmaking.init()
+  }
+
+  console.log("Successfully loaded matchmaking module")
+} catch (error) {
+  console.error("Error loading matchmaking module:", error)
+}
 
 // Initialize express app
 const app = express()
@@ -42,9 +52,6 @@ const pusher = new Pusher({
   cluster: process.env.PUSHER_CLUSTER || "eu",
   useTLS: true,
 })
-
-// Initialize custom modules
-matchmaking.init(pusher)
 
 // Initialize PostgreSQL connection (if available)
 let pool
@@ -835,6 +842,10 @@ const canJoinMoreDebates = (user) => {
     dailyLimit = 20
   } else if (user.subscription === "elite") {
     dailyLimit = 50
+  } else if (  {
+    dailyLimit = 20
+  } else if (user.subscription === "elite") {
+    dailyLimit = 50
   } else if (user.subscription === "institutional") {
     dailyLimit = 100
   }
@@ -863,8 +874,8 @@ app.post("/api/debates/:id/join", (req, res) => {
     })
   }
 
-  const userData = readData()
-  const user = userData.users.find((u) => u.email === email)
+  const data = readData()
+  const user = data.users.find((u) => u.email === email)
 
   if (!user) {
     return res.status(404).json({ error: "User not found" })
@@ -921,7 +932,7 @@ app.post("/api/debates/:id/join", (req, res) => {
 
   // Save changes
   writeDebates(debatesData)
-  writeData(userData)
+  writeData(data)
 
   // Trigger Pusher event for real-time updates
   pusher.trigger(`debate-${id}`, "user-joined", {
@@ -962,8 +973,8 @@ app.post("/api/debates", (req, res) => {
     })
   }
 
-  const userData = readData()
-  const user = userData.users.find((u) => u.email === email)
+  const data = readData()
+  const user = data.users.find((u) => u.email === email)
 
   if (!user) {
     return res.status(404).json({ error: "User not found" })
@@ -1013,7 +1024,7 @@ app.post("/api/debates", (req, res) => {
   user.debatesJoined += 1
   user.debatesJoinedToday = (user.debatesJoinedToday || 0) + 1
   user.lastDebateJoinDate = new Date().toISOString()
-  writeData(userData)
+  writeData(data)
 
   // Trigger Pusher event for real-time updates
   pusher.trigger("debates", "debate-created", {
@@ -1044,8 +1055,8 @@ app.post("/api/debates/:id/messages", (req, res) => {
     })
   }
 
-  const userData = readData()
-  const user = userData.users.find((u) => u.email === email)
+  const data = readData()
+  const user = data.users.find((u) => u.email === email)
 
   if (!user) {
     return res.status(404).json({ error: "User not found" })
@@ -1058,7 +1069,7 @@ app.post("/api/debates/:id/messages", (req, res) => {
       user.ipHistory = []
     }
     user.ipHistory.push({ ip, timestamp: new Date().toISOString() })
-    writeData(userData)
+    writeData(data)
   }
 
   const debatesData = readDebates()
@@ -1131,8 +1142,8 @@ app.post("/api/debates/:id/ai-message", (req, res) => {
     })
   }
 
-  const userData = readData()
-  const user = userData.users.find((u) => u.email === email)
+  const data = readData()
+  const user = data.users.find((u) => u.email === email)
 
   if (!user) {
     return res.status(404).json({ error: "User not found" })
@@ -1145,7 +1156,7 @@ app.post("/api/debates/:id/ai-message", (req, res) => {
       user.ipHistory = []
     }
     user.ipHistory.push({ ip, timestamp: new Date().toISOString() })
-    writeData(userData)
+    writeData(data)
   }
 
   // Check if user has access to AI features
@@ -1222,8 +1233,8 @@ app.post("/api/matchmaking/join", (req, res) => {
     })
   }
 
-  const userData = readData()
-  const user = userData.users.find((u) => u.email === email)
+  const data = readData()
+  const user = data.users.find((u) => u.email === email)
 
   if (!user) {
     return res.status(404).json({ error: "User not found" })
@@ -1236,7 +1247,7 @@ app.post("/api/matchmaking/join", (req, res) => {
       user.ipHistory = []
     }
     user.ipHistory.push({ ip, timestamp: new Date().toISOString() })
-    writeData(userData)
+    writeData(data)
   }
 
   // Check if user can join more debates today
@@ -1318,14 +1329,14 @@ app.post("/api/matchmaking/join", (req, res) => {
     user.debatesJoinedToday = (user.debatesJoinedToday || 0) + 1
     user.lastDebateJoinDate = new Date().toISOString()
 
-    const matchedUser = userData.users.find((u) => u.id === match.userId)
+    const matchedUser = data.users.find((u) => u.id === match.userId)
     if (matchedUser) {
       matchedUser.debatesJoined += 1
       matchedUser.debatesJoinedToday = (matchedUser.debatesJoinedToday || 0) + 1
       matchedUser.lastDebateJoinDate = new Date().toISOString()
     }
 
-    writeData(userData)
+    writeData(data)
 
     // Remove both users from queue
     matchmakingData.queue = matchmakingData.queue.filter(
@@ -1370,8 +1381,8 @@ app.post("/api/matchmaking/leave", (req, res) => {
     return res.status(400).json({ error: "Email is required" })
   }
 
-  const userData = readData()
-  const user = userData.users.find((u) => u.email === email)
+  const data = readData()
+  const user = data.users.find((u) => u.email === email)
 
   if (!user) {
     return res.status(404).json({ error: "User not found" })
@@ -1395,8 +1406,8 @@ app.get("/api/matchmaking/status", (req, res) => {
     return res.status(400).json({ error: "Email is required" })
   }
 
-  const userData = readData()
-  const user = userData.users.find((u) => u.email === email)
+  const data = readData()
+  const user = data.users.find((u) => u.email === email)
 
   if (!user) {
     return res.status(404).json({ error: "User not found" })
@@ -1750,8 +1761,8 @@ app.post("/api/kofi/webhook", (req, res) => {
       case "Subscription":
         // Process subscription payment
         if (email) {
-          const userData = readData()
-          const user = userData.users.find((u) => u.email === email)
+          const data = readData()
+          const user = data.users.find((u) => u.email === email)
 
           if (user) {
             // Map tier_name directly to subscription level
@@ -1783,7 +1794,7 @@ app.post("/api/kofi/webhook", (req, res) => {
               timestamp: new Date().toISOString(),
             })
 
-            writeData(userData)
+            writeData(data)
 
             console.log(`Updated subscription for ${email} to ${subscriptionTier}`)
 
@@ -1842,9 +1853,8 @@ app.post("/api/kofi/webhook", (req, res) => {
               ],
             }
 
-            const userData = readData()
-            userData.users.push(newUser)
-            writeData(userData)
+            data.users.push(newUser)
+            writeData(data)
 
             console.log(`Created new user with email ${email} and subscription ${newUser.subscription}`)
 
@@ -1873,8 +1883,8 @@ app.post("/api/kofi/webhook", (req, res) => {
       case "Donation":
         // Handle one-time donations
         if (email) {
-          const userData = readData()
-          const user = userData.users.find((u) => u.email === email)
+          const data = readData()
+          const user = data.users.find((u) => u.email === email)
 
           if (user) {
             // Record the donation
@@ -1906,7 +1916,7 @@ app.post("/api/kofi/webhook", (req, res) => {
               console.log(`Upgraded ${email} to ${subscriptionTier} based on donation amount`)
             }
 
-            writeData(userData)
+            writeData(data)
 
             // Log transaction
             logTransaction({
@@ -1937,9 +1947,9 @@ app.post("/api/kofi/webhook", (req, res) => {
               },
             }
 
-            const userData = readData()
-            userData.users.push(newUser)
-            writeData(userData)
+            const data = readData()
+            data.users.push(newUser)
+            writeData(data)
 
             console.log(`Created new user with email ${email}`)
           }
@@ -1951,8 +1961,8 @@ app.post("/api/kofi/webhook", (req, res) => {
         console.log("Shop order received:", shop_items)
 
         if (email) {
-          const userData = readData()
-          const user = userData.users.find((u) => u.email === email)
+          const data = readData()
+          const user = data.users.find((u) => u.email === email)
 
           if (user) {
             user.shop_orders = user.shop_orders || []
@@ -1964,7 +1974,7 @@ app.post("/api/kofi/webhook", (req, res) => {
               timestamp: new Date().toISOString(),
             })
 
-            writeData(userData)
+            writeData(data)
             console.log(`Recorded shop order for ${email}`)
           } else {
             console.log(`User with email ${email} not found for shop order, creating new user`)
@@ -1988,9 +1998,9 @@ app.post("/api/kofi/webhook", (req, res) => {
               ],
             }
 
-            const userData = readData()
-            userData.users.push(newUser)
-            writeData(userData)
+            const data = readData()
+            data.users.push(newUser)
+            writeData(data)
 
             console.log(`Created new user with email ${email} for shop order`)
           }

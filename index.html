@@ -12,6 +12,8 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
   <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
   <style>
     :root {
       --primary: #1f1d79;
@@ -321,6 +323,7 @@
       margin: 0 auto;
       letter-spacing: .05em;
       animation: 
+        typing 3.5s steps(40, end),
         blink-caret .75s step-end infinite;
     }
 
@@ -672,7 +675,7 @@
           <a href="subscriptions.html" class="text-gray-600 hover:text-[#1f1d79] transition">Subscriptions</a>
         </div>
         <div>
-          <a href="#login-section" class="px-4 py-2 border-2 border-[#1f1d79] text-[#1f1d79] font-medium rounded-md hover:bg-[#1f1d79] hover:text-white transition">Sign In</a>
+          <a href="signin.html" id="sign-in-btn" class="px-4 py-2 border-2 border-[#1f1d79] text-[#1f1d79] font-medium rounded-md hover:bg-[#1f1d79] hover:text-white transition">Sign In</a>
         </div>
         <!-- Mobile menu button -->
         <div class="md:hidden">
@@ -705,27 +708,29 @@
       
       <div class="container mx-auto max-w-6xl">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-          <div class="animate__animated animate__fadeInLeft">
+          <div data-aos="fade-right" data-aos-delay="100" class="animate__animated animate__fadeInLeft">
             <div class="mb-6">
               <h1 class="text-4xl md:text-5xl font-bold">
-                <span id="typed-text" class="gradient-text typing-effect" data-typing-speed="70"></span>
+                <span id="global-diplomacy" class="gradient-text">Global Diplomacy</span>
               </h1>
               <h2 class="text-4xl md:text-5xl font-bold mb-2 text-[#454545]">at Your Fingertips</h2>
             </div>
             
             <!-- Slogan Carousel -->
-            <div class="slogan-carousel mb-6">
-              <div class="slogan-carousel-inner">
-                <div class="h-10 flex items-center text-lg text-[#454545]">Learn about global politics through debate</div>
-                <div class="h-10 flex items-center text-lg text-[#454545]">Practice diplomacy in a safe environment</div>
-                <div class="h-10 flex items-center text-lg text-[#454545]">Develop critical thinking through policy discussions</div>
-              </div>
-            </div>
+            
+<div class="slogan-carousel mb-6">
+  <div class="slogan-carousel-inner">
+    <div class="h-10 flex items-center text-lg text-[#454545]">Fight for your values through structured debate</div>
+    <div class="h-10 flex items-center text-lg text-[#454545]">Make your voice heard on issues that matter</div>
+    <div class="h-10 flex items-center text-lg text-[#454545]">Develop critical thinking through political discourse</div>
+  </div>
+</div>
+            
 
             <p class="text-lg text-gray-600 mb-8">Experience real-world diplomacy through our immersive platform. Engage in debates, represent positions, and solve global challenges - all from your computer.</p>
 
             <div class="flex flex-wrap gap-4">
-              <a href="#login-section" class="px-8 py-3 bg-white text-[#1f1d79] font-semibold rounded-full shadow-lg hover:bg-gray-100 transition">
+              <a href="signin.html" class="px-8 py-3 bg-white text-[#1f1d79] font-semibold rounded-full shadow-lg hover:bg-gray-100 transition">
                 Create Free Account
               </a>
               <a href="https://ko-fi.com/diplomaq/shop" target="_blank" class="px-8 py-3 rounded-full border-2 border-[#1f1d79] text-[#1f1d79] font-semibold hover:bg-[#1f1d79] hover:text-white transition-colors">
@@ -741,11 +746,11 @@
             </div>
           </div>
           
-          <div class="relative animate__animated animate__fadeInRight">
+          <div data-aos="fade-left" data-aos-delay="300" class="relative animate__animated animate__fadeInRight">
             <div class="relative z-10 overflow-hidden rounded-lg shadow-xl">
               <div class="absolute inset-0 bg-gradient-to-r from-[#1f1d79]/10 to-transparent z-10"></div>
-              <img src="https://sdmntprpolandcentral.oaiusercontent.com/files/00000000-ec54-620a-bedd-998959d277ca/raw?se=2025-04-18T01%3A20%3A50Z&sp=r&sv=2024-08-04&sr=b&scid=787691ce-efb5-5494-b41c-5298aaad6d74&skoid=dfdaf859-26f6-4fed-affc-1befb5ac1ac2&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-04-17T20%3A26%3A55Z&ske=2025-04-18T20%3A26%3A55Z&sks=b&skv=2024-08-04&sig=Le49EpasEPkTA3O7tKTEGPHXWkfpHXWlL/n57FPwQww%3D" 
-                 alt="Diplomacy Debates" 
+              <img src="https://media.discordapp.net/attachments/1270881377201557504/1362638428545613925/raw.png?ex=68031f6d&is=6801cded&hm=8976af8f950396e04f484bcaeb7874649b31a9fdc0723d4b932a716612be9659&=&format=webp&quality=lossless&width=790&height=527" 
+                 alt="Aim for the Moon" 
                  class="rounded-lg w-full transform transition-transform duration-700 hover:scale-105" />
               
               <div class="absolute bottom-4 right-4 z-20 flex space-x-2">
@@ -783,7 +788,7 @@
 
     <!-- Features Section -->
     <section id="features" class="py-16 px-4 bg-[#f0f4fc]">
-      <div class="container mx-auto max-w-6xl">
+      <div data-aos="fade-up" class="container mx-auto max-w-6xl">
         <div class="text-center mb-16">
           <h2 class="text-3xl md:text-4xl font-bold text-[#1f1d79] mb-4">Platform Features</h2>
           <p class="text-lg text-gray-600 max-w-3xl mx-auto">Discover the tools and features that make Diplomaq.lol the premier platform for diplomatic simulations and political debates.</p>
@@ -791,7 +796,7 @@
         
         <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
           <!-- Feature 1 -->
-          <div class="feature-box">
+          <div data-aos="fade-up" data-aos-delay="100" class="feature-box">
             <div class="feature-icon-container" style="background-color: #e9e7fc;">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-[#1f1d79]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -828,7 +833,7 @@
           </div>
           
           <!-- Feature 2 -->
-          <div class="feature-box">
+          <div data-aos="fade-up" data-aos-delay="300" class="feature-box">
             <div class="feature-icon-container" style="background-color: #fde8d4;">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-[#ff6309]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -865,7 +870,7 @@
           </div>
           
           <!-- Feature 3 -->
-          <div class="feature-box">
+          <div data-aos="fade-up" data-aos-delay="500" class="feature-box">
             <div class="feature-icon-container" style="background-color: #d0e8f2;">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-[#005791]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path d="M12 14l9-5-9-5-9 5 9 5z" />
@@ -906,103 +911,310 @@
       </div>
     </section>
 
-    <!-- Additional Content Section -->
-    <section class="py-16 px-4 bg-white">
-      <div class="container mx-auto max-w-6xl">
-        <div class="text-center mb-16">
-          <h2 class="text-3xl md:text-4xl font-bold text-[#1f1d79] mb-4">Why Choose Diplomaq?</h2>
-          <p class="text-lg text-gray-600 max-w-3xl mx-auto">Our platform offers unique advantages for students, educators, and debate enthusiasts alike.</p>
+    <!-- Debate Topics Section -->
+<section id="debate-topics" class="py-16 px-4 bg-white">
+  <div data-aos="fade-up" class="container mx-auto max-w-6xl">
+    <div class="text-center mb-16">
+      <h2 class="text-3xl md:text-4xl font-bold text-[#1f1d79] mb-4">Diverse Debate Topics</h2>
+      <p class="text-lg text-gray-600 max-w-3xl mx-auto">Fight for your values and make your voice heard on topics that matter.</p>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <!-- Religious Debates -->
+      <div data-aos="flip-left" data-aos-delay="100" class="bg-[#f8f9ff] p-8 rounded-xl shadow-lg hover:shadow-xl transition-all">
+        <div class="w-14 h-14 bg-[#e9e7fc] rounded-full flex items-center justify-center mb-6">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-[#1f1d79]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
         </div>
+        <h3 class="text-xl font-bold text-[#1f1d79] mb-3">Religious Debates</h3>
+        <p class="text-gray-600 mb-4">Engage in respectful discussions about theological perspectives, religious freedom, and the role of faith in society.</p>
+        <ul class="space-y-2 text-sm text-gray-700 mb-6">
+          <li class="flex items-center">
+            <span class="w-2 h-2 bg-[#1f1d79] rounded-full mr-2"></span>
+            <span>Secularism vs. Religious Influence</span>
+          </li>
+          <li class="flex items-center">
+            <span class="w-2 h-2 bg-[#1f1d79] rounded-full mr-2"></span>
+            <span>Religious Freedom in Modern Society</span>
+          </li>
+          <li class="flex items-center">
+            <span class="w-2 h-2 bg-[#1f1d79] rounded-full mr-2"></span>
+            <span>Interfaith Dialogue and Cooperation</span>
+          </li>
+        </ul>
+        <a href="#" class="text-[#1f1d79] font-medium hover:underline flex items-center">
+          Explore Topics
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </a>
+      </div>
+      
+      <!-- Political Ideology Debates -->
+      <div data-aos="flip-left" data-aos-delay="300" class="bg-[#f8f9ff] p-8 rounded-xl shadow-lg hover:shadow-xl transition-all">
+        <div class="w-14 h-14 bg-[#fde8d4] rounded-full flex items-center justify-center mb-6">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-[#ff6309]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+          </svg>
+        </div>
+        <h3 class="text-xl font-bold text-[#ff6309] mb-3">Political Ideology Debates</h3>
+        <p class="text-gray-600 mb-4">Discuss and defend political perspectives from across the spectrum, from far-left to far-right ideologies.</p>
+        <ul class="space-y-2 text-sm text-gray-700 mb-6">
+          <li class="flex items-center">
+            <span class="w-2 h-2 bg-[#ff6309] rounded-full mr-2"></span>
+            <span>Conservatism vs. Progressivism</span>
+          </li>
+          <li class="flex items-center">
+            <span class="w-2 h-2 bg-[#ff6309] rounded-full mr-2"></span>
+            <span>Libertarianism and Individual Rights</span>
+          </li>
+          <li class="flex items-center">
+            <span class="w-2 h-2 bg-[#ff6309] rounded-full mr-2"></span>
+            <span>Nationalism and Globalism</span>
+          </li>
+        </ul>
+        <a href="#" class="text-[#ff6309] font-medium hover:underline flex items-center">
+          Explore Topics
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </a>
+      </div>
+      
+      <!-- Social Justice Debates -->
+      <div data-aos="flip-left" data-aos-delay="500" class="bg-[#f8f9ff] p-8 rounded-xl shadow-lg hover:shadow-xl transition-all">
+        <div class="w-14 h-14 bg-[#d0e8f2] rounded-full flex items-center justify-center mb-6">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-[#005791]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+          </svg>
+        </div>
+        <h3 class="text-xl font-bold text-[#005791] mb-3">Social Justice Debates</h3>
+        <p class="text-gray-600 mb-4">Advocate for your values on critical social issues and explore different perspectives on equality and justice.</p>
+        <ul class="space-y-2 text-sm text-gray-700 mb-6">
+          <li class="flex items-center">
+            <span class="w-2 h-2 bg-[#005791] rounded-full mr-2"></span>
+            <span>Racial Equality and Systemic Reform</span>
+          </li>
+          <li class="flex items-center">
+            <span class="w-2 h-2 bg-[#005791] rounded-full mr-2"></span>
+            <span>Gender Rights and Representation</span>
+          </li>
+          <li class="flex items-center">
+            <span class="w-2 h-2 bg-[#005791] rounded-full mr-2"></span>
+            <span>Economic Justice and Opportunity</span>
+          </li>
+        </ul>
+        <a href="#" class="text-[#005791] font-medium hover:underline flex items-center">
+          Explore Topics
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Add the Youth Parliament section after the Debate Topics section -->
+<section id="youth-parliament" class="py-16 px-4 bg-white">
+  <div class="container mx-auto max-w-6xl">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+      <div data-aos="fade-right" data-aos-delay="100">
+        <h2 class="text-3xl md:text-4xl font-bold text-[#1f1d79] mb-6">Find Your Nearest Youth Parliament</h2>
+        <p class="text-lg text-gray-600 mb-6">We'll help you connect with your local youth parliament program and guide you through the entire process. If we can't successfully place you, we'll refund your money - guaranteed.</p>
         
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div class="bg-[#f8f9ff] p-8 rounded-xl shadow-lg">
-            <h3 class="text-2xl font-bold text-[#1f1d79] mb-4">For Students</h3>
-            <ul class="space-y-4">
-              <li class="flex items-start">
-                <div class="w-6 h-6 rounded-full bg-[#e9e7fc] flex items-center justify-center mr-3 mt-1">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-[#1f1d79]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <div>
-                  <span class="font-medium">Build Confidence</span>
-                  <p class="text-sm text-gray-600 mt-1">Practice in a supportive environment before participating in real conferences.</p>
-                </div>
-              </li>
-              <li class="flex items-start">
-                <div class="w-6 h-6 rounded-full bg-[#e9e7fc] flex items-center justify-center mr-3 mt-1">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-[#1f1d79]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <div>
-                  <span class="font-medium">Develop Critical Skills</span>
-                  <p class="text-sm text-gray-600 mt-1">Enhance research, public speaking, and negotiation abilities.</p>
-                </div>
-              </li>
-              <li class="flex items-start">
-                <div class="w-6 h-6 rounded-full bg-[#e9e7fc] flex items-center justify-center mr-3 mt-1">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-[#1f1d79]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <div>
-                  <span class="font-medium">Connect Globally</span>
-                  <p class="text-sm text-gray-600 mt-1">Network with like-minded peers from around the world.</p>
-                </div>
-              </li>
-            </ul>
+        <div class="space-y-4 mb-8">
+          <div class="flex items-start">
+            <div class="w-10 h-10 rounded-full bg-[#e9e7fc] flex items-center justify-center mr-4 mt-1 flex-shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#1f1d79]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012- 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="font-semibold text-[#1f1d79] text-lg">Complete Application</h3>
+              <p class="text-gray-600">Fill out our simple form with your location and interests.</p>
+            </div>
           </div>
           
-          <div class="bg-[#f8f9ff] p-8 rounded-xl shadow-lg">
-            <h3 class="text-2xl font-bold text-[#1f1d79] mb-4">For Educators</h3>
-            <ul class="space-y-4">
-              <li class="flex items-start">
-                <div class="w-6 h-6 rounded-full bg-[#e9e7fc] flex items-center justify-center mr-3 mt-1">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-[#1f1d79]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <div>
-                  <span class="font-medium">Streamlined Organization</span>
-                  <p class="text-sm text-gray-600 mt-1">Easily manage debate clubs and MUN teams with our administrative tools.</p>
-                </div>
-              </li>
-              <li class="flex items-start">
-                <div class="w-6 h-6 rounded-full bg-[#e9e7fc] flex items-center justify-center mr-3 mt-1">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-[#1f1d79]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <div>
-                  <span class="font-medium">Progress Tracking</span>
-                  <p class="text-sm text-gray-600 mt-1">Monitor student development with detailed analytics and reports.</p>
-                </div>
-              </li>
-              <li class="flex items-start">
-                <div class="w-6 h-6 rounded-full bg-[#e9e7fc] flex items-center justify-center mr-3 mt-1">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-[#1f1d79]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <div>
-                  <span class="font-medium">Ready-Made Resources</span>
-                  <p class="text-sm text-gray-600 mt-1">Access curriculum-aligned materials to enhance classroom learning.</p>
-                </div>
-              </li>
-            </ul>
+          <div class="flex items-start">
+            <div class="w-10 h-10 rounded-full bg-[#fde8d4] flex items-center justify-center mr-4 mt-1 flex-shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#ff6309]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="font-semibold text-[#1f1d79] text-lg">We Make Connections</h3>
+              <p class="text-gray-600">Our team will connect you with the appropriate youth parliament program in your area.</p>
+            </div>
+          </div>
+          
+          <div class="flex items-start">
+            <div class="w-10 h-10 rounded-full bg-[#d0e8f2] flex items-center justify-center mr-4 mt-1 flex-shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#005791]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="font-semibold text-[#1f1d79] text-lg">Money-Back Guarantee</h3>
+              <p class="text-gray-600">If we can't successfully place you, we'll refund your payment in full.</p>
+            </div>
           </div>
         </div>
+        
+        <button id="open-parliament-form" class="px-8 py-3 gradient-button text-white font-semibold rounded-full shadow-lg inline-flex items-center">
+          Get Started
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          </svg>
+        </button>
       </div>
-    </section>
+      
+      <div data-aos="fade-left" data-aos-delay="300" class="relative">
+        <div class="relative z-10 overflow-hidden rounded-lg shadow-xl">
+          <img src="https://media.discordapp.net/attachments/1270881377201557504/1362638038353575956/raw.png?ex=68031f10&is=6801cd90&hm=a6e68db11fc8ca5dcc947413434d4930a65157baa3579fb5a5d3fc608e476584&=&format=webp&quality=lossless&width=790&height=527" 
+               alt="Youth Parliament Connections" 
+               class="rounded-lg w-full transform transition-transform duration-700 hover:scale-105" />
+          <div class="absolute inset-0 bg-gradient-to-t from-[#1f1d79]/30 to-transparent rounded-lg"></div>
+          <div class="absolute bottom-4 left-4 text-white font-bold text-xl">Our Extensive Network</div>
+        </div>
+        
+        <div class="absolute -top-6 -right-6 z-0">
+          <div class="w-24 h-24 bg-[#ff6309] rounded-full opacity-20"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Add the Youth Parliament Modal Form -->
+<div id="parliament-modal" class="modal">
+  <div class="modal-content">
+    <div class="flex justify-between items-center mb-6">
+      <h3 class="text-2xl font-bold text-[#1f1d79]">Youth Parliament Application</h3>
+      <button id="close-parliament-modal" class="text-gray-500 hover:text-gray-700">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    
+    <form id="parliament-form" class="space-y-4">
+      <div>
+        <label for="parliament-name" class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+        <input type="text" id="parliament-name" name="name" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]">
+      </div>
+      
+      <div>
+        <label for="parliament-email" class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+        <input type="email" id="parliament-email" name="email" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]">
+      </div>
+      
+      <div>
+        <label for="parliament-location" class="block text-sm font-medium text-gray-700 mb-1">Your Location (City/Country)</label>
+        <input type="text" id="parliament-location" name="location" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]">
+      </div>
+      
+      <div>
+        <label for="parliament-age" class="block text-sm font-medium text-gray-700 mb-1">Age</label>
+        <input type="number" id="parliament-age" name="age" min="13" max="30" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]">
+      </div>
+      
+      <div>
+        <label for="parliament-interests" class="block text-sm font-medium text-gray-700 mb-1">Political Interests</label>
+        <textarea id="parliament-interests" name="interests" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]" placeholder="Tell us about your political interests and why you want to join a youth parliament..."></textarea>
+      </div>
+      
+      <div class="pt-4">
+        <button type="submit" class="w-full py-3 gradient-button text-white font-semibold rounded-md">Submit Application</button>
+      </div>
+      
+      <p class="text-xs text-gray-500 text-center mt-4">
+        By submitting this form, you agree to our <a href="#" class="text-[#1f1d79] hover:underline">Terms of Service</a> and <a href="#" class="text-[#1f1d79] hover:underline">Privacy Policy</a>.
+      </p>
+    </form>
+  </div>
+</div>
+
+    <!-- Make Your Voice Heard Section -->
+<section class="py-16 px-4 bg-[#f0f4fc] relative overflow-hidden">
+  <div class="absolute top-0 right-0 w-1/3 h-full bg-[#e9e7fc] opacity-50 blob-shape -z-10"></div>
+  <div class="container mx-auto max-w-6xl">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+      <div data-aos="fade-right" data-aos-delay="100" class="order-2 md:order-1">
+        <h2 class="text-3xl md:text-4xl font-bold text-[#1f1d79] mb-6">Make Your Voice Heard</h2>
+        <p class="text-lg text-gray-600 mb-6">In a world of diverse opinions, your perspective matters. Stand up for what you believe in and engage in meaningful dialogue that can change minds and shape the future.</p>
+        
+        <div class="space-y-4 mb-8">
+          <div class="flex items-start">
+            <div class="w-10 h-10 rounded-full bg-[#fde8d4] flex items-center justify-center mr-4 mt-1 flex-shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#ff6309]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="font-semibold text-[#1f1d79] text-lg">Defend Your Values</h3>
+              <p class="text-gray-600">Learn to articulate and defend your deeply held beliefs with compelling arguments and evidence.</p>
+            </div>
+          </div>
+          
+          <div class="flex items-start">
+            <div class="w-10 h-10 rounded-full bg-[#e9e7fc] flex items-center justify-center mr-4 mt-1 flex-shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#1f1d79]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="font-semibold text-[#1f1d79] text-lg">Challenge Perspectives</h3>
+              <p class="text-gray-600">Engage with opposing viewpoints in a respectful manner that promotes understanding and growth.</p>
+            </div>
+          </div>
+          
+          <div class="flex items-start">
+            <div class="w-10 h-10 rounded-full bg-[#d0e8f2] flex items-center justify-center mr-4 mt-1 flex-shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#005791]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="font-semibold text-[#1f1d79] text-lg">Create Impact</h3>
+              <p class="text-gray-600">Develop the skills to influence others and contribute meaningfully to important conversations.</p>
+            </div>
+          </div>
+        </div>
+        
+        <a href="signin.html" class="px-8 py-3 gradient-button text-white font-semibold rounded-full shadow-lg inline-flex items-center">
+          Start Debating Now
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          </svg>
+        </a>
+      </div>
+      
+      <div data-aos="fade-left" data-aos-delay="300" class="order-1 md:order-2 relative">
+        <div class="relative z-10 overflow-hidden rounded-lg shadow-xl">
+          <img src="https://images-ext-1.discordapp.net/external/hHY7NTWtyBJM25sdUl4TwWztBj6DDv--9w_5Ik-yXvM/%3Fse%3D2025-04-18T04%253A49%253A55Z%26sp%3Dr%26sv%3D2024-08-04%26sr%3Db%26scid%3De80c9a1b-9adb-5f3a-ab9c-0004a5f2a190%26skoid%3D54ae6e2b-352e-4235-bc96-afa2512cc978%26sktid%3Da48cca56-e6da-484e-a814-9c849652bcb3%26skt%3D2025-04-17T20%253A26%253A42Z%26ske%3D2025-04-18T20%253A26%253A42Z%26sks%3Db%26skv%3D2024-08-04%26sig%3DzSIrIsY%2FCh8rfksXV86exTTX8n347Qi53pQqkYbztVg%253D/https/sdmntpritalynorth.oaiusercontent.com/files/00000000-d570-6246-85f4-2519538c0edb/raw?format=webp&width=790&height=527" 
+               alt="Make Your Voice Heard" 
+               class="rounded-lg w-full transform transition-transform duration-700 hover:scale-105" />
+          <div class="absolute inset-0 bg-gradient-to-t from-[#1f1d79]/30 to-transparent rounded-lg"></div>
+          <div class="absolute bottom-4 left-4 text-white font-bold text-xl">Your Voice Matters</div>
+        </div>
+        
+        <div class="absolute -top-6 -right-6 z-0">
+          <div class="w-24 h-24 bg-[#ff6309] rounded-full opacity-20"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
     <!-- Call to Action -->
     <section id="get-started" class="py-16 px-4 gradient-bg text-white">
-      <div class="container mx-auto max-w-6xl text-center">
+      <div data-aos="zoom-in" class="container mx-auto max-w-6xl text-center">
         <h2 class="text-3xl md:text-4xl font-bold mb-6">Ready to Start Your Diplomatic Journey?</h2>
         <p class="text-lg mb-8 max-w-2xl mx-auto">Join thousands of students and educators who are already enhancing their diplomatic and debate skills on our platform.</p>
         <div class="flex flex-wrap justify-center gap-4">
-          <a href="#login-section" class="px-8 py-3 bg-white text-[#1f1d79] font-semibold rounded-full shadow-lg hover:bg-gray-100 transition">
+          <a href="signin.html" class="px-8 py-3 bg-white text-[#1f1d79] font-semibold rounded-full shadow-lg hover:bg-gray-100 transition">
             Create Free Account
           </a>
           <a href="subscriptions.html" class="px-8 py-3 border-2 border-white text-white font-semibold rounded-full hover:bg-white hover:text-[#1f1d79] transition">
@@ -1070,7 +1282,7 @@
         <div>
           <h4 class="text-lg font-semibold mb-4">Contact Us</h4>
           <p class="text-gray-200 mb-4">Have questions or feedback? We'd love to hear from you!</p>
-          <a href="mailto:info@diplomaq.lol" class="text-white hover:underline">info@diplomaq.lol</a>
+          <a href="mailto:parliament@diplomaq.lol" class="text-white hover:underline">parliament@diplomaq.lol</a>
           <div class="mt-4">
             <a href="https://ko-fi.com/diplomaq" target="_blank" class="kofi-button">
               <img src="https://storage.ko-fi.com/cdn/cup-border.png" alt="Ko-fi cup" />
@@ -1091,7 +1303,6 @@
     </div>
   </footer>
 
-  <!-- JavaScript -->
   <script>
     // Mobile menu toggle
     document.getElementById('mobile-menu-button').addEventListener('click', function() {
@@ -1109,21 +1320,24 @@
       
       // For desktop - click to toggle
       dropdowns.forEach(dropdown => {
-        dropdown.addEventListener('click', function(e) {
-          // First prevent the default behavior to avoid navigation
-          e.preventDefault();
-          
-          // Close all other dropdowns
-          dropdowns.forEach(d => {
-            if (d !== dropdown) {
-              d.classList.remove('active');
-            }
+        const trigger = dropdown.querySelector('a');
+        if (trigger) {
+          trigger.addEventListener('click', function(e) {
+            // First prevent the default behavior to avoid navigation
+            e.preventDefault();
+            
+            // Close all other dropdowns
+            dropdowns.forEach(d => {
+              if (d !== dropdown) {
+                d.classList.remove('active');
+              }
+            });
+            
+            // Toggle current dropdown
+            dropdown.classList.toggle('active');
+            e.stopPropagation();
           });
-          
-          // Toggle current dropdown
-          dropdown.classList.toggle('active');
-          e.stopPropagation();
-        });
+        }
       });
       
       // Close dropdowns when clicking elsewhere
@@ -1133,24 +1347,161 @@
         });
       });
 
-      // Initialize the typing animation for the hero section
-      const typedElement = document.getElementById('typed-text');
-      if (typedElement) {
-        const text = "Global Diplomacy";
-        let i = 0;
-        const speed = 100;
+      // Youth Parliament Modal
+      const openParliamentBtn = document.getElementById('open-parliament-form');
+      const parliamentModal = document.getElementById('parliament-modal');
+      const closeParliamentModal = document.getElementById('close-parliament-modal');
+      const parliamentForm = document.getElementById('parliament-form');
+      
+      if (openParliamentBtn && parliamentModal) {
+        openParliamentBtn.addEventListener('click', function() {
+          parliamentModal.classList.add('active');
+        });
         
-        function typeWriter() {
-          if (i < text.length) {
-            typedElement.textContent += text.charAt(i);
-            i++;
-            setTimeout(typeWriter, speed);
+        closeParliamentModal.addEventListener('click', function() {
+          parliamentModal.classList.remove('active');
+        });
+        
+        parliamentForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          
+          const formData = new FormData(parliamentForm);
+          const formDataObj = {};
+          formData.forEach((value, key) => {
+            formDataObj[key] = value;
+          });
+          
+          // Open email client directly
+          window.location.href = `mailto:parliament@diplomaq.lol?subject=Youth Parliament Application&body=Name: ${formDataObj.name}%0D%0AEmail: ${formDataObj.email}%0D%0ALocation: ${formDataObj.location}%0D%0AAge: ${formDataObj.age}%0D%0AInterests: ${formDataObj.interests}`;
+          
+          // Close modal and reset form
+          parliamentModal.classList.remove('active');
+          parliamentForm.reset();
+          alert('Your application has been submitted! Your email app should open to complete the process.');
+        });
+      }
+      
+      // Check if user is already logged in
+      const userToken = localStorage.getItem('userToken');
+      const userEmail = localStorage.getItem('userEmail');
+      const userName = localStorage.getItem('userName');
+      
+      if (userToken && userEmail) {
+        // Update UI to show logged in state
+        const signInBtn = document.getElementById('sign-in-btn');
+        if (signInBtn) {
+          signInBtn.innerHTML = `
+            <div class="flex items-center">
+              <img src="${localStorage.getItem('userAvatar') || ''}" alt="${userName || 'User'}" class="w-8 h-8 rounded-full mr-2">
+              <span>${userName || userEmail}</span>
+            </div>
+          `;
+          signInBtn.href = "#";
+          
+          // Add subscription badge if user has a paid plan
+          const subscription = localStorage.getItem('userSubscription');
+          if (subscription && subscription !== 'free') {
+            const badge = document.createElement('div');
+            badge.className = 'ml-2 px-2 py-0.5 text-xs font-bold rounded-full';
+            
+            if (subscription === 'pro') {
+              badge.className += ' bg-yellow-500 text-white';
+              badge.textContent = 'PRO';
+            } else if (subscription === 'elite') {
+              badge.className += ' bg-indigo-500 text-white';
+              badge.textContent = 'ELITE';
+            } else if (subscription === 'institutional') {
+              badge.className += ' bg-purple-500 text-white';
+              badge.textContent = 'INSTITUTIONAL';
+            }
+            
+            signInBtn.appendChild(badge);
           }
         }
-        
-        // Start typing animation after a short delay
-        setTimeout(typeWriter, 500);
       }
+    });
+
+    // Handle Google Sign-In callback
+    function handleGoogleSignIn(response) {
+      // Send the ID token to your server
+      fetch('/api/auth/google', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          token: response.credential
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.token) {
+          // Save user data and token
+          localStorage.setItem('userToken', data.token);
+          localStorage.setItem('userEmail', data.user.email);
+          localStorage.setItem('userName', data.user.name);
+          localStorage.setItem('userAvatar', data.user.avatar);
+          localStorage.setItem('userSubscription', data.user.subscription || 'free');
+          
+          // Check if username exists
+          if (data.user.username) {
+            // User already has a username, redirect to home
+            localStorage.setItem('userUsername', data.user.username);
+            window.location.href = 'index.html';
+          } else {
+            // Show username modal
+            document.getElementById('username-modal').classList.add('active');
+            
+            // Set up username form submission
+            document.getElementById('username-form').addEventListener('submit', function(e) {
+              e.preventDefault();
+              
+              const username = document.getElementById('username').value;
+              
+              // Update user with username
+              fetch('/api/user/update', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${data.token}`
+                },
+                body: JSON.stringify({
+                  email: data.user.email,
+                  username: username
+                })
+              })
+              .then(res => res.json())
+              .then(updateData => {
+                if (updateData.success) {
+                  localStorage.setItem('userUsername', username);
+                  window.location.href = 'index.html';
+                } else {
+                  alert('Error updating username: ' + updateData.error);
+                }
+              })
+              .catch(error => {
+                console.error('Error updating username:', error);
+                alert('An error occurred. Please try again.');
+              });
+            });
+          }
+        } else {
+          console.error('Authentication failed:', data.error);
+          alert('Authentication failed. Please try again.');
+        }
+      })
+      .catch(error => {
+        console.error('Error during authentication:', error);
+        alert('Authentication failed. Please try again.');
+      });
+    }
+
+    // Initialize AOS (Animate on Scroll)
+    AOS.init({
+      duration: 800,
+      easing: 'ease-in-out',
+      once: false,
+      mirror: true
     });
   </script>
 </body>

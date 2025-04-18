@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In - Diplomaq.lol</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+  <style>
+    :root {
+      --primary: #1f1d79;
+      --primary-light: #a5bcda;
+      --secondary: #ff6309;
+      --secondary-light: #ff7c30;
+      --accent: #c75495;
+      --bg-cream: #fdfbf6;
+      --text-dark: #454545;
+    }
+    
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: #f0f4fc;
+      color: var(--text-dark);
+      overflow-x: hidden;
+    }
+    
+    .gradient-bg {
+      background: linear-gradient(135deg, #1f1d79 0%, #005791 100%);
+    }
+    
+    .gradient-text {
+      background: linear-gradient(90deg, #1f1d79 0%, #c75495 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .gradient-button {
+      background: linear-gradient(90deg, #ff6309 0%, #ff7c30 100%);
+      transition: all 0.3s ease;
+    }
+    
+    .gradient-button:hover {
+      background: linear-gradient(90deg, #e86a00 0%, #f16a30 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(255, 99, 9, 0.2);
+    }
+    
+    /* Modal styles */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .modal.active {
+      display: flex;
+    }
+    
+    .modal-content {
+      background-color: white;
+      padding: 30px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      animation: modalFadeIn 0.3s;
+    }
+    
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
+      <div class="text-center mb-8">
+        <div class="flex items-center justify-center mb-4">
+          <div class="relative">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" class="animate__animated animate__fadeIn">
+              <circle cx="24" cy="24" r="18" fill="#1f1d79"/>
+              <path d="M24 6C14.0589 6 6 14.0589 6 24C6 33.9411 14.0589 42 24 42C33.9411 42 42 33.9411 42 24C42 14.0589 33.9411 6 24 6Z" fill="#1f1d79"/>
+              <path d="M18 18C18 16.0117 19.6117 14.4 21.6 14.4H26.4C28.3883 14.4 30 16.0117 30 18V30C30 31.9883 28.3883 33.6 26.4 33.6H21.6C19.6117 33.6 18 31.9883 18 30V18Z" fill="white"/>
+              <path d="M14.4 21.6C14.4 20.2745 15.4745 19.2 16.8 19.2C18.1255 19.2 19.2 20.2745 19.2 21.6V26.4C19.2 27.7255 18.1255 28.8 16.8 28.8C15.4745 28.8 14.4 27.7255 14.4 26.4V21.6Z" fill="white"/>
+              <path d="M28.8 21.6C28.8 20.2745 29.8745 19.2 31.2 19.2C32.5255 19.2 33.6 20.2745 33.6 21.6V26.4C33.6 27.7255 32.5255 28.8 31.2 28.8C29.8745 28.8 28.8 27.7255 28.8 26.4V21.6Z" fill="white"/>
+              <path d="M34 34L38 38M38 34L34 38" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <div class="absolute -bottom-1 -right-1 text-xs font-bold text-[#ff6309]">.lol</div>
+          </div>
+          <h1 class="text-2xl font-bold text-[#1f1d79] ml-2">Diplomaq</h1>
+        </div>
+        <h2 class="text-2xl font-bold text-[#1f1d79]">Sign In</h2>
+        <p class="text-gray-600 mt-2">Sign in to access your account</p>
+      </div>
+      
+      <div class="mb-8">
+        <button id="google-signin-btn" class="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 transition">
+          <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+            <path fill="none" d="M0 0h48v48H0z"/>
+          </svg>
+          <span class="text-gray-700 font-medium">Sign in with Google</span>
+        </button>
+      </div>
+      
+      <div class="text-center">
+        <p class="text-gray-600">
+          Don't have an account? <a href="#" class="text-[#1f1d79] font-medium hover:underline">Sign up</a>
+        </p>
+        <a href="index.html" class="block mt-4 text-[#1f1d79] hover:underline">Back to Home</a>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Username Modal -->
+  <div id="username-modal" class="modal">
+    <div class="modal-content">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-2xl font-bold text-[#1f1d79]">Choose a Username</h3>
+      </div>
+      
+      <form id="username-form" class="space-y-4">
+        <div>
+          <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+          <input type="text" id="username" name="username" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]">
+          <p class="text-sm text-gray-500 mt-1">This will be your public display name.</p>
+        </div>
+        
+        <div class="pt-4">
+          <button type="submit" class="w-full py-3 gradient-button text-white font-semibold rounded-md">Continue</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Google Sign-In
+      const googleSignInBtn = document.getElementById('google-signin-btn');
+      if (googleSignInBtn) {
+        googleSignInBtn.addEventListener('click', function() {
+          // Initialize Google Sign-In
+          google.accounts.id.initialize({
+            client_id: '741864469861-v3jmuek30cf8pvhdgd27d100nmpt4ot7.apps.googleusercontent.com',
+            callback: handleGoogleSignIn
+          });
+          
+          google.accounts.id.prompt();
+        });
+      }
+      
+      // Handle Google Sign-In callback
+      function handleGoogleSignIn(response) {
+        // Send the ID token to your server
+        fetch('/api/auth/google', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            token: response.credential
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.token) {
+              // Save user data and token
+              localStorage.setItem('userToken', data.token);
+              localStorage.setItem('userEmail', data.user.email);
+              localStorage.setItem('userName', data.user.name);
+              localStorage.setItem('userAvatar', data.user.avatar);
+              localStorage.setItem('userSubscription', data.user.subscription || 'free');
+              
+              // Check if username exists
+              if (data.user.username) {
+                // User already has a username, redirect to home
+                localStorage.setItem('userUsername', data.user.username);
+                window.location.href = 'index.html';
+              } else {
+                // Show username modal
+                document.getElementById('username-modal').classList.add('active');
+                
+                // Set up username form submission
+                document.getElementById('username-form').addEventListener('submit', function(e) {
+                  e.preventDefault();
+                  
+                  const username = document.getElementById('username').value;
+                  
+                  // Update user with username
+                  fetch('/api/user/update', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${data.token}`
+                    },
+                    body: JSON.stringify({
+                      email: data.user.email,
+                      username: username
+                    })
+                  })
+                  .then(res => res.json())
+                  .then(updateData => {
+                    if (updateData.success) {
+                      localStorage.setItem('userUsername', username);
+                      window.location.href = 'index.html';
+                    } else {
+                      alert('Error updating username: ' + updateData.error);
+                    }
+                  })
+                  .catch(error => {
+                    console.error('Error updating username:', error);
+                    alert('An error occurred. Please try again.');
+                  });
+                });
+              }
+            } else {
+              console.error('Authentication failed:', data.error);
+              alert('Authentication failed. Please try again.');
+            }
+          })
+          .catch(error => {
+            console.error('Error during authentication:', error);
+            alert('Authentication failed. Please try again.');
+          });
+        }
+      });
+    });
+  </script>
+</body>
+</html>

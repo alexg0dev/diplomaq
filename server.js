@@ -18,7 +18,7 @@ const PORT = process.env.PORT || 3000
 const GOOGLE_CLIENT_ID = "741864469861-v3jmuek30cf8pvhdgd27d100nmpt4ot7.apps.googleusercontent.com"
 const GOOGLE_CLIENT_SECRET = "GOCSPX-Ow-Iy-Iy-Iy-Iy-Iy-Iy-Iy-Iy-Iy-Iy" // Replace with your actual client secret
 const JWT_SECRET = "diplomaq-secret-key" // Replace with a strong secret in production
-const REDIRECT_URI = "https://diplomaq-production.up.railway.app/api/auth/callback/google"
+const REDIRECT_URI = "https://diplomaq-production.up.railway.app/"
 const FRONTEND_URL = "https://diplomaq-production.up.railway.app"
 
 // Initialize Google OAuth2 client

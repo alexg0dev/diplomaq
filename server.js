@@ -842,10 +842,6 @@ const canJoinMoreDebates = (user) => {
     dailyLimit = 20
   } else if (user.subscription === "elite") {
     dailyLimit = 50
-  } else if (  {
-    dailyLimit = 20
-  } else if (user.subscription === "elite") {
-    dailyLimit = 50
   } else if (user.subscription === "institutional") {
     dailyLimit = 100
   }

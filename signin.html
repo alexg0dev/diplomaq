@@ -105,16 +105,24 @@
       </div>
       
       <div class="mb-8">
-        <button id="google-signin-btn" class="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 transition">
-          <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
-            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-            <path fill="none" d="M0 0h48v48H0z"/>
-          </svg>
-          <span class="text-gray-700 font-medium">Sign in with Google</span>
-        </button>
+        <!-- Google Sign-In Button -->
+        <div id="g_id_onload"
+             data-client_id="741864469861-v3jmuek30cf8pvhdgd27d100nmpt4ot7.apps.googleusercontent.com"
+             data-context="signin"
+             data-ux_mode="popup"
+             data-callback="handleCredentialResponse"
+             data-auto_prompt="false">
+        </div>
+
+        <div class="g_id_signin"
+             data-type="standard"
+             data-shape="rectangular"
+             data-theme="outline"
+             data-text="signin_with"
+             data-size="large"
+             data-logo_alignment="center"
+             data-width="100%">
+        </div>
       </div>
       
       <div class="text-center">
@@ -148,94 +156,119 @@
   </div>
 
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Google Sign-In
-      const googleSignInBtn = document.getElementById('google-signin-btn');
-      if (googleSignInBtn) {
-        googleSignInBtn.addEventListener('click', function() {
-          // Initialize Google Sign-In
-          google.accounts.id.initialize({
-            client_id: '741864469861-v3jmuek30cf8pvhdgd27d100nmpt4ot7.apps.googleusercontent.com',
-            callback: handleGoogleSignIn
-          });
+    // Handle Google Sign-In credential response
+    function handleCredentialResponse(response) {
+      // Send the ID token to your server
+      fetch('/api/auth/google', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          token: response.credential
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.token) {
+          // Save user data and token
+          localStorage.setItem('userToken', data.token);
+          localStorage.setItem('userEmail', data.user.email);
+          localStorage.setItem('userName', data.user.name);
+          localStorage.setItem('userAvatar', data.user.avatar);
+          localStorage.setItem('userSubscription', data.user.subscription || 'free');
           
-          google.accounts.id.prompt();
-        });
+          // Check if username exists
+          if (data.user.username) {
+            // User already has a username, redirect to home
+            localStorage.setItem('userUsername', data.user.username);
+            window.location.href = 'index.html';
+          } else {
+            // Show username modal
+            document.getElementById('username-modal').classList.add('active');
+            
+            // Set up username form submission
+            document.getElementById('username-form').addEventListener('submit', function(e) {
+              e.preventDefault();
+              
+              const username = document.getElementById('username').value;
+              
+              // Update user with username
+              fetch('/api/user/update', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${data.token}`
+                },
+                body: JSON.stringify({
+                  email: data.user.email,
+                  username: username
+                })
+              })
+              .then(res => res.json())
+              .then(updateData => {
+                if (updateData.success) {
+                  localStorage.setItem('userUsername', username);
+                  window.location.href = 'index.html';
+                } else {
+                  alert('Error updating username: ' + updateData.error);
+                }
+              })
+              .catch(error => {
+                console.error('Error updating username:', error);
+                alert('An error occurred. Please try again.');
+              });
+            });
+          }
+        } else {
+          console.error('Authentication failed:', data.error);
+          alert('Authentication failed. Please try again.');
+        }
+      })
+      .catch(error => {
+        console.error('Error during authentication:', error);
+        alert('Authentication failed. Please try again.');
+      });
+    }
+
+    // Set up username form submission
+    document.getElementById('username-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const username = document.getElementById('username').value;
+      const userToken = localStorage.getItem('userToken');
+      const userEmail = localStorage.getItem('userEmail');
+      
+      if (!userToken || !userEmail) {
+        alert('Authentication information missing. Please sign in again.');
+        window.location.href = 'signin.html';
+        return;
       }
       
-      // Handle Google Sign-In callback
-      function handleGoogleSignIn(response) {
-        // Send the ID token to your server
-        fetch('/api/auth/google', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            token: response.credential
-          })
-          .then(res => res.json())
-          .then(data => {
-            if (data.token) {
-              // Save user data and token
-              localStorage.setItem('userToken', data.token);
-              localStorage.setItem('userEmail', data.user.email);
-              localStorage.setItem('userName', data.user.name);
-              localStorage.setItem('userAvatar', data.user.avatar);
-              localStorage.setItem('userSubscription', data.user.subscription || 'free');
-              
-              // Check if username exists
-              if (data.user.username) {
-                // User already has a username, redirect to home
-                localStorage.setItem('userUsername', data.user.username);
-                window.location.href = 'index.html';
-              } else {
-                // Show username modal
-                document.getElementById('username-modal').classList.add('active');
-                
-                // Set up username form submission
-                document.getElementById('username-form').addEventListener('submit', function(e) {
-                  e.preventDefault();
-                  
-                  const username = document.getElementById('username').value;
-                  
-                  // Update user with username
-                  fetch('/api/user/update', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'Authorization': `Bearer ${data.token}`
-                    },
-                    body: JSON.stringify({
-                      email: data.user.email,
-                      username: username
-                    })
-                  })
-                  .then(res => res.json())
-                  .then(updateData => {
-                    if (updateData.success) {
-                      localStorage.setItem('userUsername', username);
-                      window.location.href = 'index.html';
-                    } else {
-                      alert('Error updating username: ' + updateData.error);
-                    }
-                  })
-                  .catch(error => {
-                    console.error('Error updating username:', error);
-                    alert('An error occurred. Please try again.');
-                  });
-                });
-              }
-            } else {
-              console.error('Authentication failed:', data.error);
-              alert('Authentication failed. Please try again.');
-            }
-          })
-          .catch(error => {
-            console.error('Error during authentication:', error);
-            alert('Authentication failed. Please try again.');
-          });
+      // Update user with username
+      fetch('/api/user/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${userToken}`
+        },
+        body: JSON.stringify({
+          email: userEmail,
+          username: username
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          localStorage.setItem('userUsername', username);
+          window.location.href = 'index.html';
+        } else {
+          alert('Error updating username: ' + data.error);
         }
+      })
+      .catch(error => {
+        console.error('Error updating username:', error);
+        alert('An error occurred. Please try again.');
       });
     });
   </script>

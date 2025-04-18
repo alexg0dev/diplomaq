@@ -1385,7 +1385,7 @@
       const userToken = localStorage.getItem('userToken');
       const userEmail = localStorage.getItem('userEmail');
       const userName = localStorage.getItem('userName');
-      
+
       if (userToken && userEmail) {
         // Update UI to show logged in state
         const signInBtn = document.getElementById('sign-in-btn');
@@ -1396,7 +1396,7 @@
               <span>${userName || userEmail}</span>
             </div>
           `;
-          signInBtn.href = "#";
+          signInBtn.href = "profile.html";
           
           // Add subscription badge if user has a paid plan
           const subscription = localStorage.getItem('userSubscription');

@@ -1006,12 +1006,17 @@ app.post("/api/debates/:id/join", (req, res) => {
 
 // Create a new debate
 app.post("/api/debates", (req, res) => {
-  const { title, description, council, email } = req.body
+  const { title, description, council, topic, email } = req.body
   const ip = req.clientIp
 
   if (!title || !description || !council || !email) {
     return res.status(400).json({ error: "Title, description, council, and email are required" })
   }
+
+  // Filter curse words
+  const filteredTitle = filterCurseWords(title)
+  const filteredDescription = filterCurseWords(description)
+  const filteredTopic = filterCurseWords(topic)
 
   // Check if user is banned
   const ban = isUserBanned(email, ip)
@@ -1044,9 +1049,10 @@ app.post("/api/debates", (req, res) => {
   const debateId = crypto.randomUUID()
   const newDebate = {
     id: debateId,
-    title,
-    description,
+    title: filteredTitle,
+    description: filteredDescription,
     council,
+    topic: filteredTopic || "General",
     status: "active",
     participants: [
       {
@@ -1094,6 +1100,9 @@ app.post("/api/debates/:id/messages", (req, res) => {
   if (!email || !content) {
     return res.status(400).json({ error: "Email and content are required" })
   }
+
+  // Filter curse words
+  const filteredContent = filterCurseWords(content)
 
   // Check if user is banned
   const ban = isUserBanned(email, ip)
@@ -1145,7 +1154,7 @@ app.post("/api/debates/:id/messages", (req, res) => {
     name: user.name,
     username: user.username,
     avatar: user.avatar,
-    content,
+    content: filteredContent,
     timestamp: new Date().toISOString(),
   }
 
@@ -2104,3 +2113,108 @@ process.on("SIGTERM", () => {
     console.log("HTTP server closed")
   })
 })
+
+// Update the topics object to only include UN councils
+const topics = {
+  UNSC: [
+    "Cybersecurity and International Peace",
+    "Nuclear Non-Proliferation",
+    "Terrorism and International Security",
+    "Protection of Civilians in Armed Conflict",
+    "Climate Change as a Security Threat",
+    "Peacekeeping Operations Reform",
+    "Women, Peace, and Security",
+    "Maritime Security and Piracy",
+    "Sanctions Regimes Effectiveness",
+    "Conflict Prevention in Fragile States",
+    "Cross-Border Humanitarian Access",
+    "Small Arms and Light Weapons Proliferation",
+    "Children in Armed Conflict",
+    "Post-Conflict Peacebuilding",
+    "Regional Organizations and Collective Security",
+    "Protection of Critical Infrastructure",
+    "Transnational Organized Crime",
+    "Refugee Crises as Security Threats",
+    "Disarmament and Arms Control",
+    "Emerging Technologies in Warfare",
+  ],
+  UNGA: [
+    "Sustainable Development Goals Implementation",
+    "Global Health Security",
+    "Digital Divide and Technology Transfer",
+    "Outer Space Governance",
+    "Global Tax Reform",
+    "Artificial Intelligence Governance",
+    "Plastic Pollution in Oceans",
+    "Global Education Crisis",
+    "Aging Populations and Social Security",
+    "Indigenous Peoples' Rights",
+    "Global Food Security",
+    "Antimicrobial Resistance",
+    "International Migration Governance",
+    "Cultural Heritage Protection",
+    "Disaster Risk Reduction",
+    "Youth Empowerment in Decision-Making",
+    "Global Housing Crisis",
+    "Water Scarcity and Sanitation",
+    "Renewable Energy Transition",
+    "Global Mental Health Crisis",
+  ],
+  UNHRC: [
+    "Digital Rights and Privacy",
+    "Business and Human Rights",
+    "Rights of Persons with Disabilities",
+    "Freedom of Religion or Belief",
+    "Human Rights Defenders Protection",
+    "Death Penalty Moratorium",
+    "Human Rights and Climate Change",
+    "Racial Discrimination and Xenophobia",
+    "Freedom of Assembly and Association",
+    "Human Rights in Counterterrorism",
+    "LGBTQ+ Rights Globally",
+    "Right to Clean Water",
+    "Human Rights Education",
+    "Rights of Older Persons",
+    "Human Rights in the Digital Age",
+    "Arbitrary Detention",
+    "Human Trafficking and Modern Slavery",
+    "Right to Nationality and Statelessness",
+    "Freedom of Expression Online",
+    "Economic and Social Rights Implementation",
+  ],
+}
+
+// Add a function to filter curse words
+function filterCurseWords(text) {
+  if (!text) return text
+
+  // Simple list of curse words to filter
+  const curseWords = [
+    "fuck",
+    "shit",
+    "ass",
+    "bitch",
+    "cunt",
+    "dick",
+    "pussy",
+    "cock",
+    "whore",
+    "slut",
+    "bastard",
+    "damn",
+    "hell",
+    "piss",
+    "crap",
+    "nigger",
+    "faggot",
+    "retard",
+  ]
+
+  let filteredText = text
+  curseWords.forEach((word) => {
+    const regex = new RegExp("\\b" + word + "\\b", "gi")
+    filteredText = filteredText.replace(regex, "***")
+  })
+
+  return filteredText
+}

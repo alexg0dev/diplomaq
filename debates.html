@@ -188,11 +188,8 @@
         </div>
         <div class="hidden md:flex space-x-6">
           <a href="index.html" class="text-gray-600 hover:text-[#1f1d79] transition">Home</a>
-          <a href="index.html#features" class="text-gray-600 hover:text-[#1f1d79] transition">Features</a>
           <a href="debates.html" class="text-[#1f1d79] font-medium transition">Debates</a>
-          <a href="index.html#mun" class="text-gray-600 hover:text-[#1f1d79] transition">MUN</a>
-          <a href="index.html#learning" class="text-gray-600 hover:text-[#1f1d79] transition">Learning</a>
-          <a href="subscriptions.html" class="text-gray-600 hover:text-[#1f1d79] transition">Subscriptions</a>
+          <a href="profile.html" class="text-gray-600 hover:text-[#1f1d79] transition">Profile</a>
         </div>
         <div>
           <!-- User is signed in -->
@@ -230,134 +227,62 @@
   <div id="mobile-menu" class="hidden md:hidden bg-white shadow-lg rounded-b-lg animate__animated animate__fadeIn">
     <div class="px-4 py-3 space-y-2">
       <a href="index.html" class="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-[#1f1d79] transition">Home</a>
-      <a href="index.html#features" class="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-[#1f1d79] transition">Features</a>
       <a href="debates.html" class="block px-3 py-2 rounded-md text-[#1f1d79] font-medium bg-gray-100 transition">Debates</a>
-      <a href="index.html#mun" class="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-[#1f1d79] transition">MUN</a>
-      <a href="index.html#learning" class="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-[#1f1d79] transition">Learning</a>
-      <a href="subscriptions.html" class="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-[#1f1d79] transition">Subscriptions</a>
+      <a href="profile.html" class="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-[#1f1d79] transition">Profile</a>
     </div>
   </div>
   
   <!-- Main Content -->
   <main class="container mx-auto px-4 py-8">
-    <!-- Tabs -->
-    <div class="flex border-b border-gray-200 mb-8">
-      <div class="tab active" data-tab="debates">Active Debates</div>
-      <div class="tab" data-tab="matchmaking">Matchmaking</div>
-      <div class="tab" data-tab="scheduled">Scheduled Debates</div>
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-[#1f1d79] mb-2">UN Debates</h1>
+      <p class="text-gray-600">Join or create debates on global issues and practice your diplomatic skills</p>
     </div>
     
-    <!-- Tab Content -->
-    <div id="debates-tab" class="tab-content active">
-      <!-- Auth Check -->
-      <div id="auth-check" class="bg-white rounded-xl shadow-md p-8 text-center mb-8 hidden">
-        <h2 class="text-2xl font-bold text-[#1f1d79] mb-4">Sign In to Join Debates</h2>
-        <p class="text-gray-600 mb-6">You need to sign in to join debates and participate in discussions.</p>
-        <a href="signin.html" class="px-6 py-3 gradient-button text-white font-semibold rounded-md">Sign In</a>
-      </div>
-      
-      <!-- Debates List -->
-      <div id="debates-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <!-- Debates will be loaded here -->
-        <div class="flex justify-center items-center col-span-full py-12">
-          <div class="spinner"></div>
+    <!-- Filter Section -->
+    <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+      <div class="flex flex-col md:flex-row gap-4">
+        <div class="flex-1">
+          <label for="topic-filter" class="block text-sm font-medium text-gray-700 mb-1">Filter by Topic</label>
+          <input type="text" id="topic-filter" placeholder="Search topics..." class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]">
         </div>
-      </div>
-      
-      <!-- Create Debate Button -->
-      <div class="fixed bottom-6 right-6">
-        <button id="create-debate-btn" class="gradient-button text-white font-semibold rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:shadow-xl">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-          </svg>
-        </button>
-      </div>
-    </div>
-    
-    <!-- Matchmaking Tab -->
-    <div id="matchmaking-tab" class="tab-content">
-      <div class="bg-white rounded-xl shadow-md p-8 mb-8">
-        <h2 class="text-2xl font-bold text-[#1f1d79] mb-4">Find a Debate Partner</h2>
-        <p class="text-gray-600 mb-6">Get matched with another user to start a debate on a topic of your choice.</p>
-        
-        <!-- Matchmaking Form -->
-        <div id="matchmaking-form" class="space-y-6">
-          <div>
-            <label for="council-select" class="block text-sm font-medium text-gray-700 mb-1">Select Council</label>
-            <select id="council-select" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]">
-              <option value="">-- Select Council --</option>
-              <option value="UNSC">UN Security Council (UNSC)</option>
-              <option value="UNGA">UN General Assembly (UNGA)</option>
-              <option value="UNHRC">UN Human Rights Council (UNHRC)</option>
-              <option value="WHO">World Health Organization (WHO)</option>
-              <option value="ECOSOC">Economic and Social Council (ECOSOC)</option>
-              <option value="UNEP">UN Environment Programme (UNEP)</option>
-            </select>
-          </div>
-          
-          <div>
-            <label for="topic-select" class="block text-sm font-medium text-gray-700 mb-1">Select Topic (Optional)</label>
-            <select id="topic-select" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]" disabled>
-              <option value="">-- Select Topic (Optional) --</option>
-            </select>
-            <p class="text-sm text-gray-500 mt-1">If you don't select a topic, you'll be matched with anyone in the same council.</p>
-          </div>
-          
-          <div>
-            <button id="join-queue-btn" class="w-full py-3 gradient-button text-white font-semibold rounded-md">Join Queue</button>
-          </div>
-        </div>
-        
-        <!-- Queue Status -->
-        <div id="queue-status" class="hidden space-y-6">
-          <div class="bg-blue-50 border border-blue-200 rounded-md p-4">
-            <h3 class="text-lg font-semibold text-blue-800 mb-2">You're in the Queue</h3>
-            <p class="text-blue-700">
-              You are position <span id="queue-position" class="font-bold">1</span> of <span id="queue-size" class="font-bold">1</span> in the queue for <span id="queue-council" class="font-bold">UNSC</span>.
-            </p>
-            <p class="text-blue-700 mt-2">We'll notify you when a match is found.</p>
-          </div>
-          
-          <div>
-            <button id="leave-queue-btn" class="w-full py-3 border border-red-500 text-red-500 font-semibold rounded-md hover:bg-red-500 hover:text-white transition">Leave Queue</button>
-          </div>
-        </div>
-      </div>
-      
-      <!-- AI Debate Option -->
-      <div class="bg-white rounded-xl shadow-md p-8">
-        <h2 class="text-2xl font-bold text-[#1f1d79] mb-4">Practice with AI</h2>
-        <p class="text-gray-600 mb-6">Can't find a match? Practice your debating skills with our AI diplomat.</p>
-        
-        <div class="flex flex-col md:flex-row gap-4">
-          <select id="ai-council-select" class="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]">
-            <option value="">-- Select Council --</option>
-            <option value="UNSC">UN Security Council (UNSC)</option>
-            <option value="UNGA">UN General Assembly (UNGA)</option>
-            <option value="UNHRC">UN Human Rights Council (UNHRC)</option>
-            <option value="WHO">World Health Organization (WHO)</option>
-            <option value="ECOSOC">Economic and Social Council (ECOSOC)</option>
-            <option value="UNEP">UN Environment Programme (UNEP)</option>
+        <div>
+          <label for="status-filter" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+          <select id="status-filter" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]">
+            <option value="all">All Debates</option>
+            <option value="active" selected>Active</option>
+            <option value="scheduled">Scheduled</option>
           </select>
-          
-          <button id="start-ai-debate-btn" class="px-6 py-2 gradient-button text-white font-semibold rounded-md">Start AI Debate</button>
         </div>
-        
-        <div id="ai-subscription-notice" class="mt-4 text-sm text-gray-500">
-          <p>AI debates are available to Pro, Elite, and Institutional subscribers only.</p>
-          <a href="subscriptions.html" class="text-[#1f1d79] hover:underline">Upgrade your subscription</a>
+        <div class="self-end">
+          <button id="apply-filters-btn" class="px-6 py-2 gradient-button text-white font-semibold rounded-md">Apply Filters</button>
         </div>
       </div>
     </div>
     
-    <!-- Scheduled Debates Tab -->
-    <div id="scheduled-tab" class="tab-content">
-      <div id="scheduled-debates-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <!-- Scheduled debates will be loaded here -->
-        <div class="flex justify-center items-center col-span-full py-12">
-          <div class="spinner"></div>
-        </div>
+    <!-- Auth Check -->
+    <div id="auth-check" class="bg-white rounded-xl shadow-md p-8 text-center mb-8 hidden">
+      <h2 class="text-2xl font-bold text-[#1f1d79] mb-4">Sign In to Join Debates</h2>
+      <p class="text-gray-600 mb-6">You need to sign in to join debates and participate in discussions.</p>
+      <a href="signin.html" class="px-6 py-3 gradient-button text-white font-semibold rounded-md">Sign In</a>
+    </div>
+    
+    <!-- Debates List -->
+    <div id="debates-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Debates will be loaded here -->
+      <div class="flex justify-center items-center col-span-full py-12">
+        <div class="spinner"></div>
       </div>
+    </div>
+    
+    <!-- Create Debate Button -->
+    <div class="fixed bottom-6 right-6">
+      <button id="create-debate-btn" class="gradient-button text-white font-semibold rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:shadow-xl">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+      </button>
     </div>
   </main>
   
@@ -385,16 +310,18 @@
         </div>
         
         <div>
-          <label for="debate-council" class="block text-sm font-medium text-gray-700 mb-1">Council</label>
+          <label for="debate-council" class="block text-sm font-medium text-gray-700 mb-1">UN Council</label>
           <select id="debate-council" name="council" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]">
             <option value="">-- Select Council --</option>
             <option value="UNSC">UN Security Council (UNSC)</option>
             <option value="UNGA">UN General Assembly (UNGA)</option>
             <option value="UNHRC">UN Human Rights Council (UNHRC)</option>
-            <option value="WHO">World Health Organization (WHO)</option>
-            <option value="ECOSOC">Economic and Social Council (ECOSOC)</option>
-            <option value="UNEP">UN Environment Programme (UNEP)</option>
           </select>
+        </div>
+        
+        <div>
+          <label for="debate-topic" class="block text-sm font-medium text-gray-700 mb-1">Topic</label>
+          <input type="text" id="debate-topic" name="topic" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]" placeholder="e.g., Climate Change, Nuclear Disarmament, Human Rights">
         </div>
         
         <div class="pt-4">
@@ -421,6 +348,10 @@
         <div class="flex items-center mt-2">
           <span class="text-sm text-gray-500">Council:</span>
           <span id="debate-view-council" class="ml-2 text-sm font-medium text-[#1f1d79]">UNSC</span>
+        </div>
+        <div class="flex items-center mt-1">
+          <span class="text-sm text-gray-500">Topic:</span>
+          <span id="debate-view-topic" class="ml-2 text-sm font-medium text-[#1f1d79]">Climate Change</span>
         </div>
       </div>
       
@@ -494,8 +425,6 @@
     </div>
   </div>
   
-  <!-- Scripts -->
-  <script src="matchmaking.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       // Check if user is logged in
@@ -564,20 +493,6 @@
         document.getElementById('auth-check').classList.remove('hidden');
       }
       
-      // Check URL parameters for token and email (for redirects from sign in)
-      const urlParams = new URLSearchParams(window.location.search);
-      const token = urlParams.get('token');
-      const email = urlParams.get('email');
-      
-      if (token && email) {
-        // Store user data
-        localStorage.setItem('userToken', token);
-        localStorage.setItem('userEmail', email);
-        
-        // Reload the page without the query parameters
-        window.location.href = window.location.pathname;
-      }
-      
       // Mobile menu toggle
       const mobileMenuButton = document.getElementById('mobile-menu-button');
       const mobileMenu = document.getElementById('mobile-menu');
@@ -586,26 +501,13 @@
         mobileMenu.classList.toggle('hidden');
       });
       
-      // Tab switching
-      const tabs = document.querySelectorAll('.tab');
-      const tabContents = document.querySelectorAll('.tab-content');
-      
-      tabs.forEach(tab => {
-        tab.addEventListener('click', function() {
-          const tabId = this.getAttribute('data-tab');
-          
-          // Remove active class from all tabs and tab contents
-          tabs.forEach(t => t.classList.remove('active'));
-          tabContents.forEach(c => c.classList.remove('active'));
-          
-          // Add active class to clicked tab and corresponding content
-          this.classList.add('active');
-          document.getElementById(`${tabId}-tab`).classList.add('active');
-        });
-      });
-      
       // Load debates
       loadDebates();
+      
+      // Filter functionality
+      document.getElementById('apply-filters-btn').addEventListener('click', function() {
+        loadDebates();
+      });
       
       // Create debate modal
       const createDebateBtn = document.getElementById('create-debate-btn');
@@ -635,16 +537,23 @@
         const title = document.getElementById('debate-title').value;
         const description = document.getElementById('debate-description').value;
         const council = document.getElementById('debate-council').value;
+        const topic = document.getElementById('debate-topic').value;
         
-        if (!title || !description || !council) {
+        if (!title || !description || !council || !topic) {
           alert('Please fill in all fields.');
+          return;
+        }
+        
+        // Check for curse words
+        if (containsCurseWords(title) || containsCurseWords(description) || containsCurseWords(topic)) {
+          alert('Please avoid using inappropriate language in your debate.');
           return;
         }
         
         // Disable submit button
         const submitBtn = document.getElementById('submit-debate-btn');
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Creating...';
+        submitBtn.innerHTML = '<span class="spinner inline-block mr-2"></span> Creating...';
         
         // Create debate
         fetch('/api/debates', {
@@ -656,6 +565,7 @@
             title,
             description,
             council,
+            topic,
             email: userEmail
           })
         })
@@ -679,7 +589,7 @@
           
           // Re-enable submit button
           submitBtn.disabled = false;
-          submitBtn.textContent = 'Create Debate';
+          submitBtn.innerHTML = 'Create Debate';
         })
         .catch(error => {
           console.error('Error creating debate:', error);
@@ -687,7 +597,7 @@
           
           // Re-enable submit button
           submitBtn.disabled = false;
-          submitBtn.textContent = 'Create Debate';
+          submitBtn.innerHTML = 'Create Debate';
         });
       });
       
@@ -723,7 +633,7 @@
         // Disable submit button
         const submitBtn = document.getElementById('submit-ai-prompt-btn');
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Generating...';
+        submitBtn.innerHTML = '<span class="spinner inline-block mr-2"></span> Generating...';
         
         // Get current debate ID
         const debateId = document.getElementById('debate-view-modal').getAttribute('data-debate-id');
@@ -757,7 +667,7 @@
           
           // Re-enable submit button
           submitBtn.disabled = false;
-          submitBtn.textContent = 'Get AI Response';
+          submitBtn.innerHTML = 'Get AI Response';
         })
         .catch(error => {
           console.error('Error getting AI response:', error);
@@ -765,23 +675,20 @@
           
           // Re-enable submit button
           submitBtn.disabled = false;
-          submitBtn.textContent = 'Get AI Response';
+          submitBtn.innerHTML = 'Get AI Response';
         });
       });
       
       // Functions
       function loadDebates() {
         const debatesList = document.getElementById('debates-list');
-        const scheduledDebatesList = document.getElementById('scheduled-debates-list');
+        
+        // Get filter values
+        const topicFilter = document.getElementById('topic-filter').value.toLowerCase();
+        const statusFilter = document.getElementById('status-filter').value;
         
         // Show loading spinner
         debatesList.innerHTML = `
-          <div class="flex justify-center items-center col-span-full py-12">
-            <div class="spinner"></div>
-          </div>
-        `;
-        
-        scheduledDebatesList.innerHTML = `
           <div class="flex justify-center items-center col-span-full py-12">
             <div class="spinner"></div>
           </div>
@@ -791,22 +698,37 @@
         fetch('/api/debates')
           .then(res => res.json())
           .then(data => {
-            const activeDebates = data.debates.filter(debate => debate.status === 'active');
-            const scheduledDebates = data.debates.filter(debate => debate.status === 'scheduled');
+            // Filter debates
+            let filteredDebates = data.debates;
             
-            // Render active debates
-            if (activeDebates.length > 0) {
-              debatesList.innerHTML = activeDebates.map(debate => {
+            if (statusFilter !== 'all') {
+              filteredDebates = filteredDebates.filter(debate => debate.status === statusFilter);
+            }
+            
+            if (topicFilter) {
+              filteredDebates = filteredDebates.filter(debate => 
+                debate.title.toLowerCase().includes(topicFilter) || 
+                debate.description.toLowerCase().includes(topicFilter) ||
+                (debate.topic && debate.topic.toLowerCase().includes(topicFilter))
+              );
+            }
+            
+            // Render debates
+            if (filteredDebates.length > 0) {
+              debatesList.innerHTML = filteredDebates.map(debate => {
                 return `
                   <div class="debate-card bg-white rounded-xl shadow-md overflow-hidden">
                     <div class="p-6">
                       <h3 class="text-xl font-bold text-[#1f1d79] mb-2">${debate.title}</h3>
                       <p class="text-gray-600 mb-4">${debate.description}</p>
-                      <div class="flex items-center justify-between">
+                      <div class="flex items-center justify-between mb-2">
                         <span class="text-sm font-medium text-[#1f1d79]">${debate.council}</span>
                         <span class="text-sm text-gray-500">${debate.participants.length} participants</span>
                       </div>
-                      <button class="view-debate-btn w-full mt-4 py-2 border border-[#1f1d79] text-[#1f1d79] font-medium rounded-md hover:bg-[#1f1d79] hover:text-white transition" data-debate-id="${debate.id}">View Debate</button>
+                      <div class="mb-4">
+                        <span class="text-sm text-gray-500">Topic: ${debate.topic || 'General'}</span>
+                      </div>
+                      <button class="view-debate-btn w-full py-2 border border-[#1f1d79] text-[#1f1d79] font-medium rounded-md hover:bg-[#1f1d79] hover:text-white transition" data-debate-id="${debate.id}">View Debate</button>
                     </div>
                   </div>
                 `;
@@ -816,7 +738,7 @@
               document.querySelectorAll('.view-debate-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
                   const debateId = this.getAttribute('data-debate-id');
-                  const debate = activeDebates.find(d => d.id === debateId);
+                  const debate = filteredDebates.find(d => d.id === debateId);
                   
                   if (debate) {
                     openDebateView(debate);
@@ -826,7 +748,7 @@
             } else {
               debatesList.innerHTML = `
                 <div class="col-span-full text-center py-12">
-                  <p class="text-gray-500 mb-4">No active debates found.</p>
+                  <p class="text-gray-500 mb-4">No debates found matching your filters.</p>
                   <button id="create-first-debate-btn" class="px-6 py-3 gradient-button text-white font-semibold rounded-md">Create Your First Debate</button>
                 </div>
               `;
@@ -840,39 +762,6 @@
                 
                 createDebateModal.classList.add('active');
               });
-            }
-            
-            // Render scheduled debates
-            if (scheduledDebates.length > 0) {
-              scheduledDebatesList.innerHTML = scheduledDebates.map(debate => {
-                const startDate = new Date(debate.startTime);
-                const formattedDate = startDate.toLocaleDateString();
-                const formattedTime = startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                
-                return `
-                  <div class="debate-card bg-white rounded-xl shadow-md overflow-hidden">
-                    <div class="p-6">
-                      <h3 class="text-xl font-bold text-[#1f1d79] mb-2">${debate.title}</h3>
-                      <p class="text-gray-600 mb-4">${debate.description}</p>
-                      <div class="flex items-center justify-between mb-4">
-                        <span class="text-sm font-medium text-[#1f1d79]">${debate.council}</span>
-                        <span class="text-sm text-gray-500">${debate.participants.length} participants</span>
-                      </div>
-                      <div class="bg-blue-50 p-3 rounded-md">
-                        <p class="text-sm text-blue-800">
-                          <span class="font-medium">Scheduled for:</span> ${formattedDate} at ${formattedTime}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                `;
-              }).join('');
-            } else {
-              scheduledDebatesList.innerHTML = `
-                <div class="col-span-full text-center py-12">
-                  <p class="text-gray-500">No scheduled debates found.</p>
-                </div>
-              `;
             }
           })
           .catch(error => {
@@ -894,6 +783,7 @@
         document.getElementById('debate-view-title').textContent = debate.title;
         document.getElementById('debate-view-description').textContent = debate.description;
         document.getElementById('debate-view-council').textContent = debate.council;
+        document.getElementById('debate-view-topic').textContent = debate.topic || 'General';
         
         // Set debate ID
         debateViewModal.setAttribute('data-debate-id', debate.id);
@@ -947,7 +837,7 @@
             
             // Disable button
             joinDebateBtn.disabled = true;
-            joinDebateBtn.textContent = 'Joining...';
+            joinDebateBtn.innerHTML = '<span class="spinner inline-block mr-2"></span> Joining...';
             
             // Join debate
             fetch(`/api/debates/${debate.id}/join`, {
@@ -997,7 +887,7 @@
                 
                 // Re-enable button
                 joinDebateBtn.disabled = false;
-                joinDebateBtn.textContent = 'Join Debate';
+                joinDebateBtn.innerHTML = 'Join Debate';
               }
             })
             .catch(error => {
@@ -1006,7 +896,7 @@
               
               // Re-enable button
               joinDebateBtn.disabled = false;
-              joinDebateBtn.textContent = 'Join Debate';
+              joinDebateBtn.innerHTML = 'Join Debate';
             });
           };
         }
@@ -1079,6 +969,12 @@
           const content = chatInput.value.trim();
           
           if (!content) return;
+          
+          // Check for curse words
+          if (containsCurseWords(content)) {
+            alert('Please avoid using inappropriate language in your messages.');
+            return;
+          }
           
           // Clear input
           chatInput.value = '';
@@ -1197,89 +1093,18 @@
           .catch(error => console.error('Error checking AI access:', error));
       }
       
-      // AI debate button
-      document.getElementById('start-ai-debate-btn').addEventListener('click', function() {
-        if (!userToken || !userEmail) {
-          alert('Please sign in to start an AI debate.');
-          window.location.href = 'signin.html';
-          return;
-        }
+      // Function to check for curse words
+      function containsCurseWords(text) {
+        // Simple list of curse words to filter
+        const curseWords = [
+          'fuck', 'shit', 'ass', 'bitch', 'cunt', 'dick', 'pussy', 'cock', 'whore', 'slut',
+          'bastard', 'damn', 'hell', 'piss', 'crap', 'nigger', 'faggot', 'retard'
+        ];
         
-        const council = document.getElementById('ai-council-select').value;
+        const lowerText = text.toLowerCase();
         
-        if (!council) {
-          alert('Please select a council.');
-          return;
-        }
-        
-        // Check if user has access to AI features
-        fetch(`/api/access/verify?email=${encodeURIComponent(userEmail)}&feature=debate-ai`)
-          .then(res => res.json())
-          .then(data => {
-            if (data.hasAccess) {
-              // Create AI debate
-              this.disabled = true;
-              this.textContent = 'Creating...';
-              
-              fetch('/api/debates', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                  title: `AI Practice: ${council}`,
-                  description: `Practice debate with AI on ${council} topics.`,
-                  council,
-                  email: userEmail,
-                  isAIDebate: true
-                })
-              })
-              .then(res => res.json())
-              .then(data => {
-                if (data.success) {
-                  // Switch to debates tab
-                  document.querySelector('.tab[data-tab="debates"]').click();
-                  
-                  // Open the debate view
-                  openDebateView(data.debate);
-                  
-                  // Generate initial AI message
-                  setTimeout(() => {
-                    fetch(`/api/debates/${data.debate.id}/ai-message`, {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json'
-                      },
-                      body: JSON.stringify({
-                        prompt: `Start a debate about ${council} topics`,
-                        email: userEmail
-                      })
-                    })
-                    .catch(error => console.error('Error generating initial AI message:', error));
-                  }, 1000);
-                } else {
-                  alert('Error: ' + (data.error || 'Failed to create AI debate'));
-                }
-                
-                this.disabled = false;
-                this.textContent = 'Start AI Debate';
-              })
-              .catch(error => {
-                console.error('Error creating AI debate:', error);
-                alert('An error occurred. Please try again later.');
-                
-                this.disabled = false;
-                this.textContent = 'Start AI Debate';
-              });
-            } else {
-              alert('AI debates are only available to Pro, Elite, and Institutional subscribers. Please upgrade your subscription.');
-            }
-          })
-          .catch(error => {
-            console.error('Error checking AI access:', error);
-            alert('An error occurred. Please try again later.');
-          });
-      });
+        return curseWords.some(word => lowerText.includes(word));
+      }
     });
   </script>
 </body>

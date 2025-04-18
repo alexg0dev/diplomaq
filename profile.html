@@ -7,8 +7,6 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
-  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
   <style>
     :root {
       --primary: #1f1d79;
@@ -69,6 +67,16 @@
     .badge-institutional {
       background: linear-gradient(135deg, #c084fc 0%, #9333ea 100%);
     }
+    
+    /* Activity card */
+    .activity-card {
+      transition: all 0.3s ease;
+    }
+    
+    .activity-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
   </style>
 </head>
 <body>
@@ -94,10 +102,8 @@
         </div>
         <div class="hidden md:flex space-x-6">
           <a href="index.html" class="text-gray-600 hover:text-[#1f1d79] transition">Home</a>
-          <a href="index.html#features" class="text-gray-600 hover:text-[#1f1d79] transition">Features</a>
-          <a href="index.html#debates" class="text-gray-600 hover:text-[#1f1d79] transition">Debates</a>
-          <a href="index.html#mun" class="text-gray-600 hover:text-[#1f1d79] transition">Diplomacy</a>
-          <a href="subscriptions.html" class="text-gray-600 hover:text-[#1f1d79] transition">Subscriptions</a>
+          <a href="debates.html" class="text-gray-600 hover:text-[#1f1d79] transition">Debates</a>
+          <a href="profile.html" class="text-[#1f1d79] font-medium transition">Profile</a>
         </div>
         <div>
           <a href="#" id="logout-btn" class="px-4 py-2 border-2 border-[#1f1d79] text-[#1f1d79] font-medium rounded-md hover:bg-[#1f1d79] hover:text-white transition">Sign Out</a>
@@ -108,51 +114,145 @@
 
   <!-- Profile Section -->
   <section class="py-16 px-4">
-    <div class="container mx-auto max-w-4xl">
-      <div data-aos="fade-up" class="bg-white rounded-xl shadow-lg overflow-hidden">
+    <div class="container mx-auto max-w-6xl">
+      <div class="bg-white rounded-xl shadow-lg overflow-hidden">
         <div class="gradient-bg p-8 text-white">
-          <div class="flex items-center">
-            <img id="user-avatar" src="/placeholder.svg" alt="User Avatar" class="w-20 h-20 rounded-full border-4 border-white mr-6">
-            <div>
+          <div class="flex flex-col md:flex-row items-center md:items-start">
+            <img id="user-avatar" src="/placeholder.svg" alt="User Avatar" class="w-24 h-24 rounded-full border-4 border-white mb-4 md:mb-0 md:mr-6">
+            <div class="text-center md:text-left">
               <h1 id="user-name" class="text-3xl font-bold"></h1>
               <p id="user-email" class="text-lg opacity-90"></p>
+              <div class="flex flex-wrap justify-center md:justify-start gap-2 mt-2">
+                <div id="subscription-badge" class="text-white font-bold px-3 py-1 rounded-lg text-sm"></div>
+                <div id="debates-joined-badge" class="bg-blue-500 text-white font-bold px-3 py-1 rounded-lg text-sm"></div>
+                <div id="debates-created-badge" class="bg-green-500 text-white font-bold px-3 py-1 rounded-lg text-sm"></div>
+              </div>
             </div>
           </div>
         </div>
         
         <div class="p-8">
-          <div class="mb-8">
-            <h2 class="text-2xl font-bold text-[#1f1d79] mb-4">Subscription Details</h2>
-            <div class="flex items-center">
-              <div id="subscription-badge" class="text-white font-bold px-4 py-2 rounded-lg mr-4"></div>
-              <div id="subscription-expiry"></div>
+          <!-- Stats Section -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-gray-50 p-6 rounded-xl">
+              <h3 class="text-lg font-bold text-[#1f1d79] mb-2">Debates Joined</h3>
+              <p id="debates-joined-count" class="text-3xl font-bold text-gray-800">0</p>
+              <p class="text-sm text-gray-500">Total debates you've participated in</p>
+            </div>
+            
+            <div class="bg-gray-50 p-6 rounded-xl">
+              <h3 class="text-lg font-bold text-[#1f1d79] mb-2">Debates Created</h3>
+              <p id="debates-created-count" class="text-3xl font-bold text-gray-800">0</p>
+              <p class="text-sm text-gray-500">Debates you've started</p>
+            </div>
+            
+            <div class="bg-gray-50 p-6 rounded-xl">
+              <h3 class="text-lg font-bold text-[#1f1d79] mb-2">Daily Limit</h3>
+              <p id="daily-limit" class="text-3xl font-bold text-gray-800">0/8</p>
+              <p class="text-sm text-gray-500">Debates you can join today</p>
             </div>
           </div>
           
-          <div class="mb-8">
-            <h2 class="text-2xl font-bold text-[#1f1d79] mb-4">Account Information</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <p class="text-gray-500 text-sm">Username</p>
-                <p id="username" class="font-medium"></p>
+          <!-- Tabs -->
+          <div class="mb-6">
+            <div class="border-b border-gray-200">
+              <nav class="flex -mb-px">
+                <button id="tab-recent-activity" class="tab-button text-[#1f1d79] border-b-2 border-[#1f1d79] px-4 py-2 font-medium" data-tab="recent-activity">Recent Activity</button>
+                <button id="tab-ai-suggestions" class="tab-button text-gray-500 hover:text-[#1f1d79] px-4 py-2 font-medium" data-tab="ai-suggestions">AI Suggestions</button>
+                <button id="tab-account-info" class="tab-button text-gray-500 hover:text-[#1f1d79] px-4 py-2 font-medium" data-tab="account-info">Account Info</button>
+              </nav>
+            </div>
+          </div>
+          
+          <!-- Tab Content -->
+          <div id="tab-content">
+            <!-- Recent Activity Tab -->
+            <div id="recent-activity-content" class="tab-content">
+              <h2 class="text-xl font-bold text-[#1f1d79] mb-4">Your Recent Activity</h2>
+              <div id="recent-activity-list" class="space-y-4">
+                <div class="flex justify-center items-center py-8">
+                  <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1f1d79]"></div>
+                </div>
               </div>
-              <div>
-                <p class="text-gray-500 text-sm">Member Since</p>
-                <p id="created-at" class="font-medium"></p>
+            </div>
+            
+            <!-- AI Suggestions Tab -->
+            <div id="ai-suggestions-content" class="tab-content hidden">
+              <h2 class="text-xl font-bold text-[#1f1d79] mb-4">AI Suggestions</h2>
+              
+              <div id="ai-subscription-notice" class="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <h3 class="text-lg font-semibold text-yellow-800 mb-2">Upgrade for AI Features</h3>
+                <p class="text-yellow-700 mb-3">AI suggestions are available to Pro, Elite, and Institutional subscribers only.</p>
+                <a href="subscriptions.html" class="inline-block px-4 py-2 gradient-button text-white font-medium rounded-md">View Subscription Plans</a>
               </div>
-              <div>
-                <p class="text-gray-500 text-sm">Last Login</p>
-                <p id="last-login" class="font-medium"></p>
+              
+              <div id="ai-suggestions-list" class="space-y-4 hidden">
+                <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                  <h3 class="text-lg font-semibold text-[#1f1d79] mb-2">Debate Topic Suggestions</h3>
+                  <p class="text-gray-600 mb-3">Based on your activity, you might be interested in these topics:</p>
+                  <ul class="list-disc list-inside space-y-1 text-gray-700">
+                    <li>Climate Change Mitigation Strategies</li>
+                    <li>Nuclear Non-Proliferation in the Modern Era</li>
+                    <li>Global Refugee Crisis Solutions</li>
+                    <li>Cybersecurity and International Law</li>
+                  </ul>
+                </div>
+                
+                <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                  <h3 class="text-lg font-semibold text-[#1f1d79] mb-2">Diplomatic Skills to Improve</h3>
+                  <p class="text-gray-600 mb-3">Our AI has analyzed your debate participation and suggests focusing on:</p>
+                  <ul class="list-disc list-inside space-y-1 text-gray-700">
+                    <li>Persuasive argumentation techniques</li>
+                    <li>Building consensus among diverse viewpoints</li>
+                    <li>Effective use of historical precedents</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Account Info Tab -->
+            <div id="account-info-content" class="tab-content hidden">
+              <h2 class="text-xl font-bold text-[#1f1d79] mb-4">Account Information</h2>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <p class="text-gray-500 text-sm">Username</p>
+                  <p id="username" class="font-medium"></p>
+                </div>
+                <div>
+                  <p class="text-gray-500 text-sm">Member Since</p>
+                  <p id="created-at" class="font-medium"></p>
+                </div>
+                <div>
+                  <p class="text-gray-500 text-sm">Last Login</p>
+                  <p id="last-login" class="font-medium"></p>
+                </div>
+                <div>
+                  <p class="text-gray-500 text-sm">Subscription</p>
+                  <div class="flex items-center">
+                    <p id="subscription-type" class="font-medium"></p>
+                    <span id="subscription-expiry" class="ml-2 text-sm text-gray-500"></span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mt-6">
+                <h3 class="text-lg font-semibold text-[#1f1d79] mb-3">Subscription Benefits</h3>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                  <ul id="subscription-benefits" class="list-disc list-inside space-y-1 text-gray-700">
+                    <!-- Benefits will be loaded here -->
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
           
-          <div class="flex flex-wrap gap-4">
-            <a href="subscriptions.html" class="px-6 py-2 gradient-button text-white font-semibold rounded-md shadow-md">
-              Manage Subscription
+          <div class="flex flex-wrap gap-4 mt-8">
+            <a href="debates.html" class="px-6 py-2 gradient-button text-white font-semibold rounded-md shadow-md">
+              Join a Debate
             </a>
-            <a href="index.html" class="px-6 py-2 border border-gray-300 text-gray-700 font-semibold rounded-md hover:bg-gray-50 transition">
-              Back to Home
+            <a href="subscriptions.html" class="px-6 py-2 border border-gray-300 text-gray-700 font-semibold rounded-md hover:bg-gray-50 transition">
+              Manage Subscription
             </a>
           </div>
         </div>
@@ -171,13 +271,6 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      // Initialize AOS
-      AOS.init({
-        duration: 800,
-        easing: 'ease-in-out',
-        once: true
-      });
-      
       // Check if user is logged in
       const userToken = localStorage.getItem('userToken');
       const userEmail = localStorage.getItem('userEmail');
@@ -187,57 +280,159 @@
         return;
       }
       
-      // Populate user data
-      document.getElementById('user-name').textContent = localStorage.getItem('userName') || 'User';
-      document.getElementById('user-email').textContent = userEmail;
-      document.getElementById('username').textContent = localStorage.getItem('userUsername') || 'Not set';
-      
-      const avatar = localStorage.getItem('userAvatar');
-      if (avatar) {
-        document.getElementById('user-avatar').src = avatar;
-      }
-      
-      // Format dates
-      const formatDate = (dateString) => {
-        if (!dateString) return 'N/A';
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', { 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric' 
+      // Load user profile data
+      fetch(`/api/user/profile?email=${encodeURIComponent(userEmail)}`)
+        .then(res => res.json())
+        .then(data => {
+          // Populate user data
+          document.getElementById('user-name').textContent = data.name || 'User';
+          document.getElementById('user-email').textContent = data.email;
+          document.getElementById('username').textContent = data.username || 'Not set';
+          
+          const avatar = data.avatar;
+          if (avatar) {
+            document.getElementById('user-avatar').src = avatar;
+          }
+          
+          // Format dates
+          const formatDate = (dateString) => {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            });
+          };
+          
+          document.getElementById('created-at').textContent = formatDate(data.createdAt);
+          document.getElementById('last-login').textContent = formatDate(data.lastLogin);
+          
+          // Set subscription badge
+          const subscription = data.subscription || 'free';
+          const subscriptionBadge = document.getElementById('subscription-badge');
+          
+          if (subscription === 'free') {
+            subscriptionBadge.textContent = 'FREE';
+            subscriptionBadge.classList.add('bg-gray-500');
+          } else if (subscription === 'pro') {
+            subscriptionBadge.textContent = 'PRO';
+            subscriptionBadge.classList.add('badge-pro');
+          } else if (subscription === 'elite') {
+            subscriptionBadge.textContent = 'ELITE';
+            subscriptionBadge.classList.add('badge-elite');
+          } else if (subscription === 'institutional') {
+            subscriptionBadge.textContent = 'INSTITUTIONAL';
+            subscriptionBadge.classList.add('badge-institutional');
+          }
+          
+          // Set subscription info
+          document.getElementById('subscription-type').textContent = subscription.charAt(0).toUpperCase() + subscription.slice(1);
+          
+          // Set subscription expiry
+          if (data.subscription_expiry && subscription !== 'free') {
+            document.getElementById('subscription-expiry').textContent = `Expires: ${formatDate(data.subscription_expiry)}`;
+          } else if (subscription === 'free') {
+            document.getElementById('subscription-expiry').textContent = '';
+          }
+          
+          // Set subscription benefits
+          const benefitsList = document.getElementById('subscription-benefits');
+          const benefits = {
+            free: [
+              'Access to basic debates',
+              'Join up to 8 debates per day',
+              'Basic profile features'
+            ],
+            pro: [
+              'Access to all debates',
+              'Join up to 20 debates per day',
+              'AI assistance in debates',
+              'Personalized AI suggestions',
+              'Priority support'
+            ],
+            elite: [
+              'All Pro features',
+              'Join up to 50 debates per day',
+              'Advanced AI assistance',
+              'Custom debate topics',
+              'Detailed analytics',
+              'Premium support'
+            ],
+            institutional: [
+              'All Elite features',
+              'Unlimited debates per day',
+              'Team management',
+              'Custom branding',
+              'Dedicated account manager',
+              'API access'
+            ]
+          };
+          
+          benefitsList.innerHTML = benefits[subscription].map(benefit => 
+            `<li>${benefit}</li>`
+          ).join('');
+          
+          // Set debates joined and created
+          document.getElementById('debates-joined-count').textContent = data.debatesJoined || 0;
+          document.getElementById('debates-created-count').textContent = data.debatesCreated || 0;
+          
+          // Set badges
+          document.getElementById('debates-joined-badge').textContent = `${data.debatesJoined || 0} Debates Joined`;
+          document.getElementById('debates-created-badge').textContent = `${data.debatesCreated || 0} Debates Created`;
+          
+          // Set daily limit
+          let dailyLimit = 8;
+          if (subscription === 'pro') dailyLimit = 20;
+          if (subscription === 'elite') dailyLimit = 50;
+          if (subscription === 'institutional') dailyLimit = 100;
+          
+          document.getElementById('daily-limit').textContent = `${data.debatesJoinedToday || 0}/${dailyLimit}`;
+          
+          // Check if user has access to AI features
+          fetch(`/api/access/verify?email=${encodeURIComponent(userEmail)}&feature=debate-ai`)
+            .then(res => res.json())
+            .then(accessData => {
+              if (accessData.hasAccess) {
+                document.getElementById('ai-subscription-notice').classList.add('hidden');
+                document.getElementById('ai-suggestions-list').classList.remove('hidden');
+              }
+            })
+            .catch(error => console.error('Error checking AI access:', error));
+          
+          // Load recent activity
+          loadRecentActivity(userEmail);
+        })
+        .catch(error => {
+          console.error('Error loading profile:', error);
+          alert('Error loading profile data. Please try again later.');
         });
-      };
       
-      document.getElementById('created-at').textContent = formatDate(localStorage.getItem('userCreatedAt'));
-      document.getElementById('last-login').textContent = formatDate(localStorage.getItem('userLastLogin'));
+      // Tab switching
+      const tabButtons = document.querySelectorAll('.tab-button');
+      const tabContents = document.querySelectorAll('.tab-content');
       
-      // Set subscription badge
-      const subscription = localStorage.getItem('userSubscription') || 'free';
-      const subscriptionBadge = document.getElementById('subscription-badge');
-      
-      if (subscription === 'free') {
-        subscriptionBadge.textContent = 'FREE';
-        subscriptionBadge.classList.add('bg-gray-500');
-      } else if (subscription === 'pro') {
-        subscriptionBadge.textContent = 'PRO';
-        subscriptionBadge.classList.add('badge-pro');
-      } else if (subscription === 'elite') {
-        subscriptionBadge.textContent = 'ELITE';
-        subscriptionBadge.classList.add('badge-elite');
-      } else if (subscription === 'institutional') {
-        subscriptionBadge.textContent = 'INSTITUTIONAL';
-        subscriptionBadge.classList.add('badge-institutional');
-      }
-      
-      // Set subscription expiry
-      const expiryDate = localStorage.getItem('userSubscriptionExpiry');
-      if (expiryDate && subscription !== 'free') {
-        document.getElementById('subscription-expiry').textContent = `Expires: ${formatDate(expiryDate)}`;
-      } else if (subscription === 'free') {
-        document.getElementById('subscription-expiry').textContent = 'Free tier';
-      } else {
-        document.getElementById('subscription-expiry').textContent = 'No expiration date';
-      }
+      tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+          const tabId = this.getAttribute('data-tab');
+          
+          // Remove active class from all buttons and contents
+          tabButtons.forEach(btn => {
+            btn.classList.remove('text-[#1f1d79]', 'border-b-2', 'border-[#1f1d79]');
+            btn.classList.add('text-gray-500', 'hover:text-[#1f1d79]');
+          });
+          
+          tabContents.forEach(content => {
+            content.classList.add('hidden');
+          });
+          
+          // Add active class to clicked button and corresponding content
+          this.classList.remove('text-gray-500', 'hover:text-[#1f1d79]');
+          this.classList.add('text-[#1f1d79]', 'border-b-2', 'border-[#1f1d79]');
+          
+          document.getElementById(`${tabId}-content`).classList.remove('hidden');
+        });
+      });
       
       // Logout functionality
       document.getElementById('logout-btn').addEventListener('click', function(e) {
@@ -249,14 +444,78 @@
         localStorage.removeItem('userName');
         localStorage.removeItem('userAvatar');
         localStorage.removeItem('userUsername');
-        localStorage.removeItem('userSubscription');
-        localStorage.removeItem('userSubscriptionExpiry');
-        localStorage.removeItem('userCreatedAt');
-        localStorage.removeItem('userLastLogin');
+        localStorage.removeItem('userId');
         
         // Redirect to home
         window.location.href = 'index.html';
       });
+      
+      // Function to load recent activity
+      function loadRecentActivity(email) {
+        const activityList = document.getElementById('recent-activity-list');
+        
+        // Fetch user's debates
+        fetch('/api/debates')
+          .then(res => res.json())
+          .then(data => {
+            // Filter debates where user is a participant
+            const userDebates = data.debates.filter(debate => 
+              debate.participants.some(p => p.email === email)
+            );
+            
+            if (userDebates.length > 0) {
+              // Sort by most recent first
+              userDebates.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+              
+              // Display the debates
+              activityList.innerHTML = userDebates.slice(0, 5).map(debate => {
+                const isCreator = debate.participants.find(p => p.email === email)?.isCreator;
+                const date = new Date(debate.createdAt).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric'
+                });
+                
+                return `
+                  <div class="activity-card bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                    <div class="flex justify-between items-start mb-2">
+                      <h3 class="text-lg font-semibold text-[#1f1d79]">${debate.title}</h3>
+                      <span class="text-xs text-gray-500">${date}</span>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">${debate.description}</p>
+                    <div class="flex justify-between items-center">
+                      <div>
+                        <span class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">${debate.council}</span>
+                        ${isCreator ? '<span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full ml-1">Created by you</span>' : ''}
+                      </div>
+                      <a href="debates.html" class="text-[#1f1d79] text-sm font-medium hover:underline">View Debate</a>
+                    </div>
+                  </div>
+                `;
+              }).join('');
+            } else {
+              activityList.innerHTML = `
+                <div class="text-center py-8">
+                  <p class="text-gray-500 mb-4">You haven't joined any debates yet.</p>
+                  <a href="debates.html" class="px-4 py-2 gradient-button text-white font-medium rounded-md">Join a Debate</a>
+                </div>
+              `;
+            }
+          })
+          .catch(error => {
+            console.error('Error loading activity:', error);
+            activityList.innerHTML = `
+              <div class="text-center py-8">
+                <p class="text-red-500 mb-4">Error loading your activity. Please try again later.</p>
+                <button id="retry-activity-btn" class="px-4 py-2 border border-[#1f1d79] text-[#1f1d79] font-medium rounded-md hover:bg-[#1f1d79] hover:text-white transition">Retry</button>
+              </div>
+            `;
+            
+            document.getElementById('retry-activity-btn').addEventListener('click', function() {
+              loadRecentActivity(email);
+            });
+          });
+      }
     });
   </script>
 </body>

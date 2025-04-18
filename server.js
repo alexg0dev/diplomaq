@@ -7,8 +7,6 @@ const { OAuth2Client } = require("google-auth-library")
 const dotenv = require("dotenv")
 const crypto = require("crypto")
 const jwt = require("jsonwebtoken")
-const axios = require("axios")
-const querystring = require("querystring")
 
 dotenv.config()
 

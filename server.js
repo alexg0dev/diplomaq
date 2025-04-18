@@ -10,6 +10,7 @@ const jwt = require("jsonwebtoken")
 const Pusher = require("pusher")
 const { Pool } = require("pg")
 const requestIp = require("request-ip")
+const cookieParser = require("cookie-parser")
 
 dotenv.config()
 
@@ -35,7 +36,7 @@ const PORT = process.env.PORT || 3000
 const GOOGLE_CLIENT_ID = "741864469861-v3jmuek30cf8pvhdgd27d100nmpt4ot7.apps.googleusercontent.com"
 const GOOGLE_CLIENT_SECRET = "GOCSPX-Ow-Iy-Iy-Iy-Iy-Iy-Iy-Iy-Iy-Iy-Iy" // Replace with your actual client secret
 const JWT_SECRET = "diplomaq-secret-key" // Replace with a strong secret in production
-const REDIRECT_URI = "https://diplomaq-production.up.railway.app/"
+const REDIRECT_URI = "https://diplomaq-production.up.railway.app/api/auth/callback/google"
 const FRONTEND_URL = "https://diplomaq-production.up.railway.app"
 
 // Admin emails with ban permissions
@@ -72,6 +73,7 @@ app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(cors())
 app.use(requestIp.mw()) // Add IP detection middleware
+app.use(cookieParser()) // Add cookie parser middleware
 
 // Serve static files from the root directory
 app.use(express.static("./"))
@@ -410,51 +412,68 @@ app.use("/api", checkBanMiddleware)
 app.get("/api/auth/google", (req, res) => {
   // Store the referrer URL to redirect back after login
   const referrer = req.headers.referer || FRONTEND_URL
+  console.log("Auth request received. Referrer:", referrer)
 
   // Store the referrer in a cookie
   res.cookie("auth_redirect", referrer, {
     maxAge: 10 * 60 * 1000, // 10 minutes
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: true,
+    sameSite: "none",
   })
 
   const authUrl = googleClient.generateAuthUrl({
     access_type: "offline",
     scope: ["profile", "email"],
     prompt: "consent",
+    redirect_uri: REDIRECT_URI,
   })
+
+  console.log("Redirecting to Google auth URL:", authUrl)
   res.redirect(authUrl)
 })
 
 // Google OAuth callback endpoint
 app.get("/api/auth/callback/google", async (req, res) => {
   const { code } = req.query
+  console.log("Received callback from Google with code:", code ? "Code received" : "No code")
 
   // Get the redirect URL from cookie
   const redirectUrl = req.cookies.auth_redirect || `${FRONTEND_URL}/index.html`
+  console.log("Redirect URL from cookie:", redirectUrl)
 
   // Clear the cookie
   res.clearCookie("auth_redirect")
 
   if (!code) {
+    console.error("No authorization code received from Google")
     return res.redirect(`${FRONTEND_URL}/signin.html?error=no_code`)
   }
 
   try {
     // Exchange code for tokens
-    const { tokens } = await googleClient.getToken(code)
+    console.log("Exchanging code for tokens...")
+    const { tokens } = await googleClient.getToken({
+      code,
+      redirect_uri: REDIRECT_URI,
+    })
+
     const idToken = tokens.id_token
+    console.log("Received tokens from Google, ID token length:", idToken ? idToken.length : 0)
 
     // Verify the ID token
     const userData = await verifyGoogleToken(idToken)
 
     if (!userData) {
+      console.error("Failed to verify Google ID token")
       return res.redirect(`${FRONTEND_URL}/signin.html?error=invalid_token`)
     }
 
     const { email, name, picture, email_verified } = userData
+    console.log("User data verified:", { email, name, email_verified })
 
     if (!email_verified) {
+      console.error("User email not verified with Google")
       return res.redirect(`${FRONTEND_URL}/signin.html?error=email_not_verified`)
     }
 
@@ -462,6 +481,7 @@ app.get("/api/auth/callback/google", async (req, res) => {
     const ip = req.clientIp
     const ban = isUserBanned(email, ip)
     if (ban) {
+      console.error("User is banned:", email)
       return res.redirect(
         `${FRONTEND_URL}/banned.html?reason=${encodeURIComponent(ban.reason)}&expires=${encodeURIComponent(ban.expiresAt || "never")}`,
       )
@@ -474,12 +494,14 @@ app.get("/api/auth/callback/google", async (req, res) => {
 
     if (user) {
       // Update existing user
+      console.log("Updating existing user:", email)
       user.name = name
       user.avatar = picture
       user.lastLogin = new Date().toISOString()
       user.lastIp = ip // Track IP for ban purposes
     } else {
       // Create new user
+      console.log("Creating new user:", email)
       user = {
         id: crypto.randomUUID(),
         email,
@@ -505,23 +527,27 @@ app.get("/api/auth/callback/google", async (req, res) => {
     const jwtToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, {
       expiresIn: "7d",
     })
+    console.log("Generated JWT token for user:", email)
 
     // Redirect to the frontend with user data
     if (needUsername) {
-      res.redirect(
-        `${FRONTEND_URL}/signin.html?token=${jwtToken}&email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}&avatar=${encodeURIComponent(picture)}&needUsername=true&redirect=${encodeURIComponent(redirectUrl)}`,
-      )
+      console.log("User needs username, redirecting to username form")
+      const redirectToSignin = `${FRONTEND_URL}/signin.html?token=${encodeURIComponent(jwtToken)}&email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}&avatar=${encodeURIComponent(picture)}&needUsername=true&redirect=${encodeURIComponent(redirectUrl)}`
+      console.log("Redirecting to:", redirectToSignin)
+      res.redirect(redirectToSignin)
     } else {
       // Redirect back to the original page
+      console.log("User has username, redirecting to original page:", redirectUrl)
       const redirectWithParams = redirectUrl.includes("?")
-        ? `${redirectUrl}&token=${jwtToken}&email=${encodeURIComponent(email)}`
-        : `${redirectUrl}?token=${jwtToken}&email=${encodeURIComponent(email)}`
+        ? `${redirectUrl}&token=${encodeURIComponent(jwtToken)}&email=${encodeURIComponent(email)}`
+        : `${redirectUrl}?token=${encodeURIComponent(jwtToken)}&email=${encodeURIComponent(email)}`
 
+      console.log("Redirecting to:", redirectWithParams)
       res.redirect(redirectWithParams)
     }
   } catch (error) {
     console.error("Google callback error:", error)
-    res.redirect(`${FRONTEND_URL}/signin.html?error=auth_error`)
+    res.redirect(`${FRONTEND_URL}/signin.html?error=auth_error&message=${encodeURIComponent(error.message)}`)
   }
 })
 
@@ -530,26 +556,32 @@ app.post("/api/auth/google", async (req, res) => {
   try {
     const { token } = req.body
     const ip = req.clientIp
+    console.log("Received token verification request")
 
     if (!token) {
+      console.error("No token provided")
       return res.status(400).json({ error: "Token is required" })
     }
 
     const userData = await verifyGoogleToken(token)
 
     if (!userData) {
+      console.error("Failed to verify token")
       return res.status(401).json({ error: "Invalid token" })
     }
 
     const { email, name, picture, email_verified } = userData
+    console.log("Token verified for user:", email)
 
     if (!email_verified) {
+      console.error("Email not verified:", email)
       return res.status(401).json({ error: "Email not verified" })
     }
 
     // Check if user is banned
     const ban = isUserBanned(email, ip)
     if (ban) {
+      console.error("User is banned:", email)
       return res.status(403).json({
         error: "Account banned",
         reason: ban.reason,
@@ -564,6 +596,7 @@ app.post("/api/auth/google", async (req, res) => {
 
     if (user) {
       // Update existing user
+      console.log("Updating existing user:", email)
       user.name = name
       user.avatar = picture
       user.lastLogin = new Date().toISOString()
@@ -579,6 +612,7 @@ app.post("/api/auth/google", async (req, res) => {
       }
     } else {
       // Create new user
+      console.log("Creating new user:", email)
       user = {
         id: crypto.randomUUID(),
         email,
@@ -603,6 +637,7 @@ app.post("/api/auth/google", async (req, res) => {
     const jwtToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, {
       expiresIn: "7d",
     })
+    console.log("Generated JWT token for user:", email)
 
     // Return user data and token
     res.json({
@@ -627,6 +662,7 @@ app.post("/api/auth/google", async (req, res) => {
 app.post("/api/auth/verify", (req, res) => {
   const { email } = req.body
   const ip = req.clientIp
+  console.log("Verifying user:", email)
 
   if (!email) {
     return res.json({ valid: false })
@@ -635,6 +671,7 @@ app.post("/api/auth/verify", (req, res) => {
   // Check if user is banned
   const ban = isUserBanned(email, ip)
   if (ban) {
+    console.error("User is banned:", email)
     return res.status(403).json({
       error: "Account banned",
       reason: ban.reason,
@@ -647,6 +684,7 @@ app.post("/api/auth/verify", (req, res) => {
   const user = data.users.find((u) => u.email === email)
 
   if (user) {
+    console.log("User verified:", email)
     // Update IP if needed
     if (user.lastIp !== ip) {
       user.lastIp = ip
@@ -666,12 +704,14 @@ app.post("/api/auth/verify", (req, res) => {
       isAdmin: ADMIN_EMAILS.includes(email),
     })
   } else {
+    console.log("User not found:", email)
     res.json({ valid: false })
   }
 })
 
 app.post("/api/auth/logout", (req, res) => {
   // In a real application, you might invalidate a session here
+  console.log("User logged out")
   res.json({ success: true })
 })
 
@@ -753,6 +793,7 @@ app.get("/api/admin/bans", (req, res) => {
 app.post("/api/user/update", (req, res) => {
   const { email, username } = req.body
   const ip = req.clientIp
+  console.log("Updating user:", email, "with username:", username)
 
   if (!email || !username) {
     return res.status(400).json({ error: "Email and username are required" })
@@ -761,6 +802,7 @@ app.post("/api/user/update", (req, res) => {
   // Check if user is banned
   const ban = isUserBanned(email, ip)
   if (ban) {
+    console.error("User is banned:", email)
     return res.status(403).json({
       error: "Account banned",
       reason: ban.reason,
@@ -786,6 +828,7 @@ app.post("/api/user/update", (req, res) => {
     }
 
     writeData(data)
+    console.log("User updated successfully:", email)
 
     res.json({
       success: true,
@@ -794,6 +837,7 @@ app.post("/api/user/update", (req, res) => {
       isAdmin: ADMIN_EMAILS.includes(email),
     })
   } else {
+    console.error("User not found:", email)
     res.status(404).json({ error: "User not found" })
   }
 })
@@ -1243,7 +1287,6 @@ app.post("/api/matchmaking/join", (req, res) => {
       user.ipHistory = []
     }
     user.ipHistory.push({ ip, timestamp: new Date().toISOString() })
-    writeData(data)
   }
 
   // Check if user can join more debates today

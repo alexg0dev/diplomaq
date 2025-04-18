@@ -32,12 +32,80 @@ app.use(cors())
 // Serve static files from the root directory
 app.use(express.static("./"))
 
-// Data storage path
+// Data storage paths
 const DATA_FILE = path.join(__dirname, "data.json")
+const DEBATES_FILE = path.join(__dirname, "debates.json")
+const MESSAGES_FILE = path.join(__dirname, "messages.json")
 
-// Initialize data file if it doesn't exist
+// Initialize data files if they don't exist
 if (!fs.existsSync(DATA_FILE)) {
   fs.writeJsonSync(DATA_FILE, { users: [] })
+}
+
+if (!fs.existsSync(DEBATES_FILE)) {
+  fs.writeJsonSync(DEBATES_FILE, {
+    debates: [
+      {
+        id: "1",
+        title: "Climate Change Solutions",
+        description: "Discussing effective policies to combat climate change",
+        council: "UNEP",
+        status: "active",
+        participants: [],
+        createdAt: new Date().toISOString(),
+        startTime: new Date().toISOString(),
+        endTime: null,
+      },
+      {
+        id: "2",
+        title: "Global Health Crisis Response",
+        description: "Strategies for international cooperation during health emergencies",
+        council: "WHO",
+        status: "active",
+        participants: [],
+        createdAt: new Date().toISOString(),
+        startTime: new Date().toISOString(),
+        endTime: null,
+      },
+      {
+        id: "3",
+        title: "Nuclear Disarmament",
+        description: "Discussing the path to global nuclear disarmament",
+        council: "UNSC",
+        status: "active",
+        participants: [],
+        createdAt: new Date().toISOString(),
+        startTime: new Date().toISOString(),
+        endTime: null,
+      },
+      {
+        id: "4",
+        title: "Refugee Crisis Management",
+        description: "Addressing the global refugee crisis and humanitarian response",
+        council: "UNHRC",
+        status: "active",
+        participants: [],
+        createdAt: new Date().toISOString(),
+        startTime: new Date().toISOString(),
+        endTime: null,
+      },
+      {
+        id: "5",
+        title: "Sustainable Development Goals",
+        description: "Progress and challenges in achieving the UN SDGs",
+        council: "ECOSOC",
+        status: "scheduled",
+        participants: [],
+        createdAt: new Date().toISOString(),
+        startTime: new Date(Date.now() + 86400000).toISOString(), // Tomorrow
+        endTime: null,
+      },
+    ],
+  })
+}
+
+if (!fs.existsSync(MESSAGES_FILE)) {
+  fs.writeJsonSync(MESSAGES_FILE, { messages: [] })
 }
 
 // Helper functions
@@ -56,6 +124,44 @@ const writeData = (data) => {
     return true
   } catch (error) {
     console.error("Error writing to data file:", error)
+    return false
+  }
+}
+
+const readDebates = () => {
+  try {
+    return fs.readJsonSync(DEBATES_FILE)
+  } catch (error) {
+    console.error("Error reading debates file:", error)
+    return { debates: [] }
+  }
+}
+
+const writeDebates = (data) => {
+  try {
+    fs.writeJsonSync(DEBATES_FILE, data)
+    return true
+  } catch (error) {
+    console.error("Error writing to debates file:", error)
+    return false
+  }
+}
+
+const readMessages = () => {
+  try {
+    return fs.readJsonSync(MESSAGES_FILE)
+  } catch (error) {
+    console.error("Error reading messages file:", error)
+    return { messages: [] }
+  }
+}
+
+const writeMessages = (data) => {
+  try {
+    fs.writeJsonSync(MESSAGES_FILE, data)
+    return true
+  } catch (error) {
+    console.error("Error writing to messages file:", error)
     return false
   }
 }
@@ -139,6 +245,10 @@ app.get("/api/auth/callback/google", async (req, res) => {
         lastLogin: new Date().toISOString(),
         subscription: "free", // Default subscription
         loyaltyPoints: 0,
+        debatesJoined: 0,
+        debatesCreated: 0,
+        debatesJoinedToday: 0,
+        lastDebateJoinDate: null,
       }
       data.users.push(user)
       needUsername = true
@@ -157,7 +267,7 @@ app.get("/api/auth/callback/google", async (req, res) => {
         `${FRONTEND_URL}/signin.html?token=${jwtToken}&email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}&avatar=${encodeURIComponent(picture)}&needUsername=true`,
       )
     } else {
-      res.redirect(`${FRONTEND_URL}/index.html?token=${jwtToken}&email=${encodeURIComponent(email)}`)
+      res.redirect(`${FRONTEND_URL}/debates.html?token=${jwtToken}&email=${encodeURIComponent(email)}`)
     }
   } catch (error) {
     console.error("Google callback error:", error)
@@ -207,6 +317,10 @@ app.post("/api/auth/google", async (req, res) => {
         lastLogin: new Date().toISOString(),
         subscription: "free", // Default subscription
         loyaltyPoints: 0,
+        debatesJoined: 0,
+        debatesCreated: 0,
+        debatesJoinedToday: 0,
+        lastDebateJoinDate: null,
       }
       data.users.push(user)
     }
@@ -254,6 +368,8 @@ app.post("/api/auth/verify", (req, res) => {
       username: user.username,
       subscription: user.subscription,
       loyaltyPoints: user.loyaltyPoints || 0,
+      avatar: user.avatar,
+      name: user.name,
     })
   } else {
     res.json({ valid: false })
@@ -293,39 +409,308 @@ app.post("/api/user/update", (req, res) => {
   }
 })
 
-// Add a new endpoint for youth parliament registration
-app.post("/api/youth-parliament/register", (req, res) => {
-  try {
-    const { name, email, location, age, interests } = req.body
+// Debate management endpoints
+app.get("/api/debates", (req, res) => {
+  const { status } = req.query
+  const debatesData = readDebates()
 
-    if (!name || !email || !location) {
-      return res.status(400).json({ error: "Name, email, and location are required" })
-    }
+  let filteredDebates = debatesData.debates
 
-    // In a real implementation, you would save this to a database
-    // and send an email notification
-
-    // Log the registration
-    console.log("Youth Parliament Registration:", {
-      name,
-      email,
-      location,
-      age,
-      interests,
-      timestamp: new Date().toISOString(),
-    })
-
-    // Send confirmation email (mock implementation)
-    console.log(`Sending confirmation email to ${email} and parliament@diplomaq.lol`)
-
-    res.json({
-      success: true,
-      message: "Registration successful! We'll contact you with next steps.",
-    })
-  } catch (error) {
-    console.error("Youth parliament registration error:", error)
-    res.status(500).json({ error: "Registration failed", details: error.message })
+  if (status) {
+    filteredDebates = filteredDebates.filter((debate) => debate.status === status)
   }
+
+  res.json({ debates: filteredDebates })
+})
+
+app.get("/api/debates/:id", (req, res) => {
+  const { id } = req.params
+  const debatesData = readDebates()
+
+  const debate = debatesData.debates.find((d) => d.id === id)
+
+  if (!debate) {
+    return res.status(404).json({ error: "Debate not found" })
+  }
+
+  res.json({ debate })
+})
+
+// Check if user can join more debates today
+const canJoinMoreDebates = (user) => {
+  // Reset daily count if it's a new day
+  const today = new Date().toISOString().split("T")[0]
+  const lastJoinDate = user.lastDebateJoinDate ? user.lastDebateJoinDate.split("T")[0] : null
+
+  if (lastJoinDate !== today) {
+    user.debatesJoinedToday = 0
+  }
+
+  // Check subscription limits
+  let dailyLimit = 8 // Default for free users
+
+  if (user.subscription === "pro") {
+    dailyLimit = 20
+  } else if (user.subscription === "elite") {
+    dailyLimit = 50
+  } else if (user.subscription === "institutional") {
+    dailyLimit = 100
+  }
+
+  return user.debatesJoinedToday < dailyLimit
+}
+
+// Join a debate
+app.post("/api/debates/:id/join", (req, res) => {
+  const { id } = req.params
+  const { email } = req.body
+
+  if (!email) {
+    return res.status(400).json({ error: "Email is required" })
+  }
+
+  const userData = readData()
+  const user = userData.users.find((u) => u.email === email)
+
+  if (!user) {
+    return res.status(404).json({ error: "User not found" })
+  }
+
+  // Check if user can join more debates today
+  if (!canJoinMoreDebates(user)) {
+    return res.status(403).json({
+      error: "Daily debate limit reached",
+      limit:
+        user.subscription === "free" ? 8 : user.subscription === "pro" ? 20 : user.subscription === "elite" ? 50 : 100,
+    })
+  }
+
+  const debatesData = readDebates()
+  const debate = debatesData.debates.find((d) => d.id === id)
+
+  if (!debate) {
+    return res.status(404).json({ error: "Debate not found" })
+  }
+
+  if (debate.status !== "active") {
+    return res.status(400).json({ error: "This debate is not currently active" })
+  }
+
+  // Check if user is already a participant
+  if (debate.participants.some((p) => p.email === email)) {
+    return res.status(400).json({ error: "You are already a participant in this debate" })
+  }
+
+  // Add user to participants
+  debate.participants.push({
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    username: user.username,
+    avatar: user.avatar,
+    joinedAt: new Date().toISOString(),
+  })
+
+  // Update user's debate stats
+  user.debatesJoined += 1
+  user.debatesJoinedToday = (user.debatesJoinedToday || 0) + 1
+  user.lastDebateJoinDate = new Date().toISOString()
+
+  // Save changes
+  writeDebates(debatesData)
+  writeData(userData)
+
+  res.json({
+    success: true,
+    debate,
+    debatesJoinedToday: user.debatesJoinedToday,
+    dailyLimit:
+      user.subscription === "free" ? 8 : user.subscription === "pro" ? 20 : user.subscription === "elite" ? 50 : 100,
+  })
+})
+
+// Create a new debate
+app.post("/api/debates", (req, res) => {
+  const { title, description, council, email } = req.body
+
+  if (!title || !description || !council || !email) {
+    return res.status(400).json({ error: "Title, description, council, and email are required" })
+  }
+
+  const userData = readData()
+  const user = userData.users.find((u) => u.email === email)
+
+  if (!user) {
+    return res.status(404).json({ error: "User not found" })
+  }
+
+  // Create new debate
+  const debateId = crypto.randomUUID()
+  const newDebate = {
+    id: debateId,
+    title,
+    description,
+    council,
+    status: "active",
+    participants: [
+      {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        username: user.username,
+        avatar: user.avatar,
+        joinedAt: new Date().toISOString(),
+        isCreator: true,
+      },
+    ],
+    createdBy: user.id,
+    createdAt: new Date().toISOString(),
+    startTime: new Date().toISOString(),
+    endTime: null,
+  }
+
+  // Update debates file
+  const debatesData = readDebates()
+  debatesData.debates.push(newDebate)
+  writeDebates(debatesData)
+
+  // Update user stats
+  user.debatesCreated = (user.debatesCreated || 0) + 1
+  user.debatesJoined += 1
+  user.debatesJoinedToday = (user.debatesJoinedToday || 0) + 1
+  user.lastDebateJoinDate = new Date().toISOString()
+  writeData(userData)
+
+  res.json({ success: true, debate: newDebate })
+})
+
+// Chat message endpoints
+app.post("/api/debates/:id/messages", (req, res) => {
+  const { id } = req.params
+  const { email, content } = req.body
+
+  if (!email || !content) {
+    return res.status(400).json({ error: "Email and content are required" })
+  }
+
+  const userData = readData()
+  const user = userData.users.find((u) => u.email === email)
+
+  if (!user) {
+    return res.status(404).json({ error: "User not found" })
+  }
+
+  const debatesData = readDebates()
+  const debate = debatesData.debates.find((d) => d.id === id)
+
+  if (!debate) {
+    return res.status(404).json({ error: "Debate not found" })
+  }
+
+  // Check if user is a participant
+  if (!debate.participants.some((p) => p.email === email)) {
+    return res.status(403).json({ error: "You must join the debate to send messages" })
+  }
+
+  // Create new message
+  const messageId = crypto.randomUUID()
+  const newMessage = {
+    id: messageId,
+    debateId: id,
+    userId: user.id,
+    email: user.email,
+    name: user.name,
+    username: user.username,
+    avatar: user.avatar,
+    content,
+    timestamp: new Date().toISOString(),
+  }
+
+  // Add message to messages file
+  const messagesData = readMessages()
+  messagesData.messages.push(newMessage)
+  writeMessages(messagesData)
+
+  res.json({ success: true, message: newMessage })
+})
+
+app.get("/api/debates/:id/messages", (req, res) => {
+  const { id } = req.params
+  const messagesData = readMessages()
+
+  const debateMessages = messagesData.messages.filter((m) => m.debateId === id)
+
+  // Sort messages by timestamp
+  debateMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+
+  res.json({ messages: debateMessages })
+})
+
+// AI message generation endpoint
+app.post("/api/debates/:id/ai-message", (req, res) => {
+  const { id } = req.params
+  const { prompt, email } = req.body
+
+  if (!prompt || !email) {
+    return res.status(400).json({ error: "Prompt and email are required" })
+  }
+
+  const userData = readData()
+  const user = userData.users.find((u) => u.email === email)
+
+  if (!user) {
+    return res.status(404).json({ error: "User not found" })
+  }
+
+  // Check if user has access to AI features
+  if (user.subscription === "free") {
+    return res
+      .status(403)
+      .json({ error: "AI features are only available to Pro, Elite, and Institutional subscribers" })
+  }
+
+  const debatesData = readDebates()
+  const debate = debatesData.debates.find((d) => d.id === id)
+
+  if (!debate) {
+    return res.status(404).json({ error: "Debate not found" })
+  }
+
+  // Generate AI response (mock implementation)
+  const aiResponses = [
+    "I believe we should consider a multilateral approach to this issue, focusing on cooperation between developed and developing nations.",
+    "The evidence suggests that economic incentives would be more effective than regulatory measures in this context.",
+    "We must prioritize sustainable development while ensuring equitable access to resources for all nations.",
+    "Historical precedents indicate that a phased implementation would yield better compliance rates.",
+    "My delegation proposes a three-step plan: assessment, capacity building, and coordinated implementation.",
+    "The scientific consensus clearly supports immediate action on this matter.",
+    "We should establish a working group to develop comprehensive guidelines that address the concerns of all stakeholders.",
+    "This issue requires balancing sovereignty concerns with our collective responsibility to the international community.",
+  ]
+
+  const aiResponse = aiResponses[Math.floor(Math.random() * aiResponses.length)]
+
+  // Create AI message
+  const messageId = crypto.randomUUID()
+  const aiMessage = {
+    id: messageId,
+    debateId: id,
+    userId: "ai-assistant",
+    email: "ai@diplomaq.lol",
+    name: "AI Diplomat",
+    username: "ai_diplomat",
+    avatar: "/images/ai-avatar.png",
+    content: aiResponse,
+    isAI: true,
+    timestamp: new Date().toISOString(),
+  }
+
+  // Add message to messages file
+  const messagesData = readMessages()
+  messagesData.messages.push(aiMessage)
+  writeMessages(messagesData)
+
+  res.json({ success: true, message: aiMessage })
 })
 
 // Enhanced Ko-fi webhook endpoint
@@ -722,6 +1107,9 @@ app.get("/api/user/profile", (req, res) => {
     lastLogin: user.lastLogin,
     createdAt: user.createdAt,
     loyaltyPoints: user.loyaltyPoints || 0,
+    debatesJoined: user.debatesJoined || 0,
+    debatesCreated: user.debatesCreated || 0,
+    debatesJoinedToday: user.debatesJoinedToday || 0,
   })
 })
 

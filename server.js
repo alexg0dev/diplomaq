@@ -16,18 +16,8 @@ const cookieParser = require("cookie-parser")
 dotenv.config()
 
 // Import custom JS files
-try {
-  const matchmaking = require("./matchmaking.js")
-
-  // Initialize matchmaking module if it has init function
-  if (typeof matchmaking.init === "function") {
-    matchmaking.init()
-  }
-
-  console.log("Successfully loaded matchmaking module")
-} catch (error) {
-  console.error("Error loading matchmaking module:", error)
-}
+// Import and initialize matchmaking module
+const matchmaking = require("./matchmaking.js")
 
 // Initialize express app
 const app = express()
@@ -1296,8 +1286,27 @@ app.post("/api/matchmaking/join", (req, res) => {
   const data = readData()
   const user = data.users.find((u) => u.email === email)
 
+  // If user not found, create a temporary user record
   if (!user) {
-    return res.status(404).json({ error: "User not found" })
+    console.log(`User with email ${email} not found for matchmaking, creating temporary record`)
+    const tempUser = {
+      id: crypto.randomUUID(),
+      email,
+      name: email.split("@")[0],
+      createdAt: new Date().toISOString(),
+      lastLogin: new Date().toISOString(),
+      lastIp: ip,
+      debatesJoined: 0,
+      debatesCreated: 0,
+      debatesJoinedToday: 0,
+      ipHistory: [{ ip, timestamp: new Date().toISOString() }],
+    }
+
+    data.users.push(tempUser)
+    writeData(data)
+
+    // Continue with the newly created user
+    return handleMatchmaking(tempUser, email, council, topic, ip, res)
   }
 
   // Update IP if needed
@@ -1307,6 +1316,7 @@ app.post("/api/matchmaking/join", (req, res) => {
       user.ipHistory = []
     }
     user.ipHistory.push({ ip, timestamp: new Date().toISOString() })
+    writeData(data)
   }
 
   // Check if user can join more debates today
@@ -1318,11 +1328,16 @@ app.post("/api/matchmaking/join", (req, res) => {
     })
   }
 
+  return handleMatchmaking(user, email, council, topic, ip, res)
+})
+
+// Add this helper function for matchmaking
+function handleMatchmaking(user, email, council, topic, ip, res) {
   // Add user to matchmaking queue
   const matchmakingData = readMatchmaking()
 
   // Check if user is already in queue
-  const existingQueueEntry = matchmakingData.queue.find((entry) => entry.userId === user.id)
+  const existingQueueEntry = matchmakingData.queue.find((entry) => entry.userId === user.id || entry.email === email)
   if (existingQueueEntry) {
     return res.status(400).json({ error: "You are already in the matchmaking queue" })
   }
@@ -1331,36 +1346,39 @@ app.post("/api/matchmaking/join", (req, res) => {
   const queueEntry = {
     userId: user.id,
     email: user.email,
-    name: user.name,
-    username: user.username,
-    avatar: user.avatar,
+    name: user.name || email.split("@")[0],
+    username: user.username || user.name || email.split("@")[0],
+    avatar: user.avatar || "/placeholder.svg",
     council,
     topic: topic || null,
     joinedAt: new Date().toISOString(),
+    lastMatchAttempt: null,
+    previousMatches: user.previousMatches ? user.previousMatches.map((match) => match.userId) : [],
   }
 
   matchmakingData.queue.push(queueEntry)
   writeMatchmaking(matchmakingData)
 
   // Try to find a match
-  const match = findMatch(queueEntry, matchmakingData.queue)
+  const match = findMatchFixed(queueEntry, matchmakingData.queue)
 
   if (match) {
     // Create a new debate for the matched users
     const debateId = crypto.randomUUID()
     const newDebate = {
       id: debateId,
-      title: match.topic || `${match.council} Debate`,
+      title: match.topic || topic || `${match.council} Debate`,
       description: `Matched debate on ${match.council}`,
       council: match.council,
+      topic: match.topic || topic || "Matched Debate",
       status: "active",
       participants: [
         {
           id: user.id,
           email: user.email,
-          name: user.name,
-          username: user.username,
-          avatar: user.avatar,
+          name: user.name || email.split("@")[0],
+          username: user.username || user.name || email.split("@")[0],
+          avatar: user.avatar || "/placeholder.svg",
           joinedAt: new Date().toISOString(),
         },
         {
@@ -1384,18 +1402,43 @@ app.post("/api/matchmaking/join", (req, res) => {
     writeDebates(debatesData)
 
     // Update user stats for both users
-    user.debatesJoined += 1
-    user.debatesJoinedToday = (user.debatesJoinedToday || 0) + 1
-    user.lastDebateJoinDate = new Date().toISOString()
+    try {
+      user.debatesJoined = (user.debatesJoined || 0) + 1
+      user.debatesJoinedToday = (user.debatesJoinedToday || 0) + 1
+      user.lastDebateJoinDate = new Date().toISOString()
 
-    const matchedUser = data.users.find((u) => u.id === match.userId)
-    if (matchedUser) {
-      matchedUser.debatesJoined += 1
-      matchedUser.debatesJoinedToday = (matchedUser.debatesJoinedToday || 0) + 1
-      matchedUser.lastDebateJoinDate = new Date().toISOString()
+      // Track previous matches
+      if (!user.previousMatches) {
+        user.previousMatches = []
+      }
+      user.previousMatches.push({
+        userId: match.userId,
+        timestamp: new Date().toISOString(),
+      })
+
+      const matchedUser = data.users.find((u) => u.id === match.userId)
+      if (matchedUser) {
+        matchedUser.debatesJoined = (matchedUser.debatesJoined || 0) + 1
+        matchedUser.debatesJoinedToday = (matchedUser.debatesJoinedToday || 0) + 1
+        matchedUser.lastDebateJoinDate = new Date().toISOString()
+
+        // Track previous matches
+        if (!matchedUser.previousMatches) {
+          matchedUser.previousMatches = []
+        }
+        matchedUser.previousMatches.push({
+          userId: user.id,
+          timestamp: new Date().toISOString(),
+        })
+      } else {
+        console.warn(`Matched user with ID ${match.userId} not found for stats update`)
+      }
+
+      writeData(data)
+    } catch (error) {
+      console.error("Error updating user stats:", error)
+      // Continue without failing the matchmaking process
     }
-
-    writeData(data)
 
     // Remove both users from queue
     matchmakingData.queue = matchmakingData.queue.filter(
@@ -1407,7 +1450,7 @@ app.post("/api/matchmaking/join", (req, res) => {
       debateId,
       users: [user.id, match.userId],
       council: match.council,
-      topic: match.topic,
+      topic: match.topic || topic,
       matchedAt: new Date().toISOString(),
     })
 
@@ -1418,20 +1461,20 @@ app.post("/api/matchmaking/join", (req, res) => {
     pusher.trigger(`user-${match.userId}`, "match-found", { debate: newDebate })
     pusher.trigger("debates", "debate-created", { debate: newDebate })
 
-    res.json({
+    return res.json({
       success: true,
       matched: true,
       debate: newDebate,
     })
   } else {
     // No match found, user is in queue
-    res.json({
+    return res.json({
       success: true,
       matched: false,
       message: "You've been added to the matchmaking queue. We'll notify you when a match is found.",
     })
   }
-})
+}
 
 app.post("/api/matchmaking/leave", (req, res) => {
   const { email } = req.body
@@ -2359,8 +2402,27 @@ app.post("/api/matchmaking/join", (req, res) => {
   const data = readData()
   const user = data.users.find((u) => u.email === email)
 
+  // If user not found, create a temporary user record
   if (!user) {
-    return res.status(404).json({ error: "User not found" })
+    console.log(`User with email ${email} not found for matchmaking, creating temporary record`)
+    const tempUser = {
+      id: crypto.randomUUID(),
+      email,
+      name: email.split("@")[0],
+      createdAt: new Date().toISOString(),
+      lastLogin: new Date().toISOString(),
+      lastIp: ip,
+      debatesJoined: 0,
+      debatesCreated: 0,
+      debatesJoinedToday: 0,
+      ipHistory: [{ ip, timestamp: new Date().toISOString() }],
+    }
+
+    data.users.push(tempUser)
+    writeData(data)
+
+    // Continue with the newly created user
+    return handleMatchmaking(tempUser, email, council, topic, ip, res)
   }
 
   // Update IP if needed
@@ -2382,11 +2444,16 @@ app.post("/api/matchmaking/join", (req, res) => {
     })
   }
 
+  return handleMatchmaking(user, email, council, topic, ip, res)
+})
+
+// Add this helper function for matchmaking
+function handleMatchmaking(user, email, council, topic, ip, res) {
   // Add user to matchmaking queue
   const matchmakingData = readMatchmaking()
 
   // Check if user is already in queue
-  const existingQueueEntry = matchmakingData.queue.find((entry) => entry.userId === user.id)
+  const existingQueueEntry = matchmakingData.queue.find((entry) => entry.userId === user.id || entry.email === email)
   if (existingQueueEntry) {
     return res.status(400).json({ error: "You are already in the matchmaking queue" })
   }
@@ -2395,14 +2462,14 @@ app.post("/api/matchmaking/join", (req, res) => {
   const queueEntry = {
     userId: user.id,
     email: user.email,
-    name: user.name,
-    username: user.username,
-    avatar: user.avatar,
+    name: user.name || email.split("@")[0],
+    username: user.username || user.name || email.split("@")[0],
+    avatar: user.avatar || "/placeholder.svg",
     council,
     topic: topic || null,
     joinedAt: new Date().toISOString(),
-    lastMatchAttempt: null, // Track last match attempt to avoid matching with same users
-    previousMatches: [], // Track previous matches to avoid matching with same users
+    lastMatchAttempt: null,
+    previousMatches: user.previousMatches ? user.previousMatches.map((match) => match.userId) : [],
   }
 
   matchmakingData.queue.push(queueEntry)
@@ -2425,9 +2492,9 @@ app.post("/api/matchmaking/join", (req, res) => {
         {
           id: user.id,
           email: user.email,
-          name: user.name,
-          username: user.username,
-          avatar: user.avatar,
+          name: user.name || email.split("@")[0],
+          username: user.username || user.name || email.split("@")[0],
+          avatar: user.avatar || "/placeholder.svg",
           joinedAt: new Date().toISOString(),
         },
         {
@@ -2451,36 +2518,43 @@ app.post("/api/matchmaking/join", (req, res) => {
     writeDebates(debatesData)
 
     // Update user stats for both users
-    user.debatesJoined += 1
-    user.debatesJoinedToday = (user.debatesJoinedToday || 0) + 1
-    user.lastDebateJoinDate = new Date().toISOString()
-
-    // Track previous matches
-    if (!user.previousMatches) {
-      user.previousMatches = []
-    }
-    user.previousMatches.push({
-      userId: match.userId,
-      timestamp: new Date().toISOString(),
-    })
-
-    const matchedUser = data.users.find((u) => u.id === match.userId)
-    if (matchedUser) {
-      matchedUser.debatesJoined += 1
-      matchedUser.debatesJoinedToday = (matchedUser.debatesJoinedToday || 0) + 1
-      matchedUser.lastDebateJoinDate = new Date().toISOString()
+    try {
+      user.debatesJoined = (user.debatesJoined || 0) + 1
+      user.debatesJoinedToday = (user.debatesJoinedToday || 0) + 1
+      user.lastDebateJoinDate = new Date().toISOString()
 
       // Track previous matches
-      if (!matchedUser.previousMatches) {
-        matchedUser.previousMatches = []
+      if (!user.previousMatches) {
+        user.previousMatches = []
       }
-      matchedUser.previousMatches.push({
-        userId: user.id,
+      user.previousMatches.push({
+        userId: match.userId,
         timestamp: new Date().toISOString(),
       })
-    }
 
-    writeData(data)
+      const matchedUser = data.users.find((u) => u.id === match.userId)
+      if (matchedUser) {
+        matchedUser.debatesJoined = (matchedUser.debatesJoined || 0) + 1
+        matchedUser.debatesJoinedToday = (matchedUser.debatesJoinedToday || 0) + 1
+        matchedUser.lastDebateJoinDate = new Date().toISOString()
+
+        // Track previous matches
+        if (!matchedUser.previousMatches) {
+          matchedUser.previousMatches = []
+        }
+        matchedUser.previousMatches.push({
+          userId: user.id,
+          timestamp: new Date().toISOString(),
+        })
+      } else {
+        console.warn(`Matched user with ID ${match.userId} not found for stats update`)
+      }
+
+      writeData(data)
+    } catch (error) {
+      console.error("Error updating user stats:", error)
+      // Continue without failing the matchmaking process
+    }
 
     // Remove both users from queue
     matchmakingData.queue = matchmakingData.queue.filter(
@@ -2503,20 +2577,20 @@ app.post("/api/matchmaking/join", (req, res) => {
     pusher.trigger(`user-${match.userId}`, "match-found", { debate: newDebate })
     pusher.trigger("debates", "debate-created", { debate: newDebate })
 
-    res.json({
+    return res.json({
       success: true,
       matched: true,
       debate: newDebate,
     })
   } else {
     // No match found, user is in queue
-    res.json({
+    return res.json({
       success: true,
       matched: false,
       message: "You've been added to the matchmaking queue. We'll notify you when a match is found.",
     })
   }
-})
+}
 
 // Helper function to find a match
 function findMatchFixed(user, queue) {
@@ -2556,4 +2630,12 @@ function findMatchFixed(user, queue) {
   // Otherwise, match with the user who has been waiting the longest
   potentialMatches.sort((a, b) => new Date(a.joinedAt) - new Date(b.joinedAt))
   return potentialMatches[0]
+}
+
+// Initialize matchmaking with the Pusher instance
+if (typeof matchmaking.init === "function") {
+  matchmaking.init(pusher)
+  console.log("Successfully initialized matchmaking module with Pusher")
+} else {
+  console.log("Matchmaking module loaded but no init function found")
 }

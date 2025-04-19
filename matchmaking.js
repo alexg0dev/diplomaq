@@ -12,7 +12,7 @@ const DEBATES_FILE = path.join(__dirname, "debates.json")
 let pusherInstance
 
 // Matchmaking constants
-const TIMEOUT_DURATION = 2 * 60 * 1000 // 2 minutes timeout (in milliseconds)
+const TIMEOUT_DURATION = 5 * 60 * 1000 // 5 minutes timeout (in milliseconds)
 const CHECK_INTERVAL = 10 * 1000 // Check every 10 seconds
 const CLEANUP_INTERVAL = 60 * 1000 // Cleanup every minute
 

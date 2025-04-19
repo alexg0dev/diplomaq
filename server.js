@@ -1335,6 +1335,7 @@ app.post("/api/matchmaking/join", (req, res) => {
 function handleMatchmaking(user, email, council, topic, ip, res) {
   // Add user to matchmaking queue
   const matchmakingData = readMatchmaking()
+  const data = readData() // Make sure we have access to the latest data
 
   // Check if user is already in queue
   const existingQueueEntry = matchmakingData.queue.find((entry) => entry.userId === user.id || entry.email === email)
@@ -1403,21 +1404,31 @@ function handleMatchmaking(user, email, council, topic, ip, res) {
 
     // Update user stats for both users
     try {
-      user.debatesJoined = (user.debatesJoined || 0) + 1
-      user.debatesJoinedToday = (user.debatesJoinedToday || 0) + 1
-      user.lastDebateJoinDate = new Date().toISOString()
+      // Get fresh user data
+      const userData = readData()
+      const currentUser = userData.users.find((u) => u.id === user.id || u.email === user.email)
 
-      // Track previous matches
-      if (!user.previousMatches) {
-        user.previousMatches = []
+      if (!currentUser) {
+        console.error(`User not found for stats update: ${user.email}`)
+      } else {
+        currentUser.debatesJoined = (currentUser.debatesJoined || 0) + 1
+        currentUser.debatesJoinedToday = (currentUser.debatesJoinedToday || 0) + 1
+        currentUser.lastDebateJoinDate = new Date().toISOString()
+
+        // Track previous matches
+        if (!currentUser.previousMatches) {
+          currentUser.previousMatches = []
+        }
+        currentUser.previousMatches.push({
+          userId: match.userId,
+          timestamp: new Date().toISOString(),
+        })
       }
-      user.previousMatches.push({
-        userId: match.userId,
-        timestamp: new Date().toISOString(),
-      })
 
-      const matchedUser = data.users.find((u) => u.id === match.userId)
-      if (matchedUser) {
+      const matchedUser = userData.users.find((u) => u.id === match.userId || u.email === match.email)
+      if (!matchedUser) {
+        console.error(`Matched user not found for stats update: ${match.email}`)
+      } else {
         matchedUser.debatesJoined = (matchedUser.debatesJoined || 0) + 1
         matchedUser.debatesJoinedToday = (matchedUser.debatesJoinedToday || 0) + 1
         matchedUser.lastDebateJoinDate = new Date().toISOString()
@@ -1430,11 +1441,9 @@ function handleMatchmaking(user, email, council, topic, ip, res) {
           userId: user.id,
           timestamp: new Date().toISOString(),
         })
-      } else {
-        console.warn(`Matched user with ID ${match.userId} not found for stats update`)
       }
 
-      writeData(data)
+      writeData(userData)
     } catch (error) {
       console.error("Error updating user stats:", error)
       // Continue without failing the matchmaking process
@@ -2451,6 +2460,7 @@ app.post("/api/matchmaking/join", (req, res) => {
 function handleMatchmaking(user, email, council, topic, ip, res) {
   // Add user to matchmaking queue
   const matchmakingData = readMatchmaking()
+  const data = readData() // Make sure we have access to the latest data
 
   // Check if user is already in queue
   const existingQueueEntry = matchmakingData.queue.find((entry) => entry.userId === user.id || entry.email === email)
@@ -2519,21 +2529,31 @@ function handleMatchmaking(user, email, council, topic, ip, res) {
 
     // Update user stats for both users
     try {
-      user.debatesJoined = (user.debatesJoined || 0) + 1
-      user.debatesJoinedToday = (user.debatesJoinedToday || 0) + 1
-      user.lastDebateJoinDate = new Date().toISOString()
+      // Get fresh user data
+      const userData = readData()
+      const currentUser = userData.users.find((u) => u.id === user.id || u.email === user.email)
 
-      // Track previous matches
-      if (!user.previousMatches) {
-        user.previousMatches = []
+      if (!currentUser) {
+        console.error(`User not found for stats update: ${user.email}`)
+      } else {
+        currentUser.debatesJoined = (currentUser.debatesJoined || 0) + 1
+        currentUser.debatesJoinedToday = (currentUser.debatesJoinedToday || 0) + 1
+        currentUser.lastDebateJoinDate = new Date().toISOString()
+
+        // Track previous matches
+        if (!currentUser.previousMatches) {
+          currentUser.previousMatches = []
+        }
+        currentUser.previousMatches.push({
+          userId: match.userId,
+          timestamp: new Date().toISOString(),
+        })
       }
-      user.previousMatches.push({
-        userId: match.userId,
-        timestamp: new Date().toISOString(),
-      })
 
-      const matchedUser = data.users.find((u) => u.id === match.userId)
-      if (matchedUser) {
+      const matchedUser = userData.users.find((u) => u.id === match.userId || u.email === match.email)
+      if (!matchedUser) {
+        console.error(`Matched user not found for stats update: ${match.email}`)
+      } else {
         matchedUser.debatesJoined = (matchedUser.debatesJoined || 0) + 1
         matchedUser.debatesJoinedToday = (matchedUser.debatesJoinedToday || 0) + 1
         matchedUser.lastDebateJoinDate = new Date().toISOString()
@@ -2546,11 +2566,9 @@ function handleMatchmaking(user, email, council, topic, ip, res) {
           userId: user.id,
           timestamp: new Date().toISOString(),
         })
-      } else {
-        console.warn(`Matched user with ID ${match.userId} not found for stats update`)
       }
 
-      writeData(data)
+      writeData(userData)
     } catch (error) {
       console.error("Error updating user stats:", error)
       // Continue without failing the matchmaking process

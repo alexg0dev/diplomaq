@@ -170,7 +170,7 @@ function cleanupExpiredEntries() {
   writeMatchmaking(matchmakingData)
 }
 
-// Generate an AI debate for a user who didn't find a match
+// Fix the generateAIDebateForUser function to properly handle user lookup
 function generateAIDebateForUser(user) {
   try {
     const userData = readData()
@@ -178,79 +178,109 @@ function generateAIDebateForUser(user) {
 
     if (!userRecord) {
       console.error(`User not found for AI debate generation: ${user.email}`)
-      return false
+
+      // Create a temporary user record if not found
+      const tempUser = {
+        id: user.userId || crypto.randomUUID(),
+        email: user.email,
+        name: user.name || user.email.split("@")[0],
+        username: user.username || user.name || user.email.split("@")[0],
+        avatar: user.avatar || "/placeholder.svg",
+        createdAt: new Date().toISOString(),
+        lastLogin: new Date().toISOString(),
+        debatesJoined: 0,
+        debatesCreated: 0,
+        debatesJoinedToday: 0,
+      }
+
+      userData.users.push(tempUser)
+      writeData(userData)
+
+      // Use the newly created user
+      return generateAIDebateWithUser(tempUser, user.council || "UNGA", user.topic)
     }
 
-    // Generate a random topic if one wasn't specified
-    const topic = user.topic || getRandomTopic(user.council || "UNGA")
-
-    // Create a new debate with AI
-    const debateId = crypto.randomUUID()
-    const newDebate = {
-      id: debateId,
-      title: `AI Debate: ${topic}`,
-      description: `AI-generated debate on ${topic}`,
-      council: user.council || "UNGA",
-      topic: topic,
-      status: "active",
-      participants: [
-        {
-          id: userRecord.id,
-          email: userRecord.email,
-          name: userRecord.name || userRecord.email.split("@")[0],
-          username: userRecord.username || userRecord.name || userRecord.email.split("@")[0],
-          avatar: userRecord.avatar || "/placeholder.svg",
-          joinedAt: new Date().toISOString(),
-        },
-        {
-          id: "ai-assistant",
-          email: "ai@diplomaq.lol",
-          name: "AI Diplomat",
-          username: "ai_diplomat",
-          avatar: "/images/ai-avatar.png",
-          joinedAt: new Date().toISOString(),
-          isAI: true,
-        },
-      ],
-      isAIDebate: true,
-      createdAt: new Date().toISOString(),
-      startTime: new Date().toISOString(),
-      endTime: null,
-    }
-
-    // Add debate to debates file
-    const debatesData = readDebates()
-    debatesData.debates.push(newDebate)
-    writeDebates(debatesData)
-
-    // Update user stats
-    userRecord.debatesJoined = (userRecord.debatesJoined || 0) + 1
-    userRecord.debatesJoinedToday = (userRecord.debatesJoinedToday || 0) + 1
-    userRecord.lastDebateJoinDate = new Date().toISOString()
-    writeData(userData)
-
-    // Notify user about the new AI debate
-    if (pusherInstance) {
-      pusherInstance.trigger(`user-${userRecord.id}`, "ai-debate-created", {
-        debate: newDebate,
-        message: "You've been matched with an AI diplomat.",
-      })
-
-      // Also trigger on the debates channel
-      pusherInstance.trigger("debates", "debate-created", { debate: newDebate })
-
-      // Generate an initial AI message
-      setTimeout(() => {
-        generateAIMessage(debateId, topic)
-      }, 2000)
-    }
-
-    console.log(`AI debate created for user ${userRecord.email} on topic: ${topic}`)
-    return true
+    return generateAIDebateWithUser(userRecord, user.council || "UNGA", user.topic)
   } catch (error) {
     console.error("Error generating AI debate:", error)
     return false
   }
+}
+
+// Helper function to generate AI debate with a valid user
+function generateAIDebateWithUser(userRecord, council, topic) {
+  // Generate a random topic if one wasn't specified
+  const debateTopic = topic || getRandomTopic(council)
+
+  // Create a new debate with AI
+  const debateId = crypto.randomUUID()
+  const newDebate = {
+    id: debateId,
+    title: `AI Debate: ${debateTopic}`,
+    description: `AI-generated debate on ${debateTopic}`,
+    council: council,
+    topic: debateTopic,
+    status: "active",
+    participants: [
+      {
+        id: userRecord.id,
+        email: userRecord.email,
+        name: userRecord.name || userRecord.email.split("@")[0],
+        username: userRecord.username || userRecord.name || userRecord.email.split("@")[0],
+        avatar: userRecord.avatar || "/placeholder.svg",
+        joinedAt: new Date().toISOString(),
+      },
+      {
+        id: "ai-assistant",
+        email: "ai@diplomaq.lol",
+        name: "AI Diplomat",
+        username: "ai_diplomat",
+        avatar: "/images/ai-avatar.png",
+        joinedAt: new Date().toISOString(),
+        isAI: true,
+      },
+    ],
+    isAIDebate: true,
+    createdAt: new Date().toISOString(),
+    startTime: new Date().toISOString(),
+    endTime: null,
+  }
+
+  // Add debate to debates file
+  const debatesData = readDebates()
+  debatesData.debates.push(newDebate)
+  writeDebates(debatesData)
+
+  // Update user stats
+  userRecord.debatesJoined = (userRecord.debatesJoined || 0) + 1
+  userRecord.debatesJoinedToday = (userRecord.debatesJoinedToday || 0) + 1
+  userRecord.lastDebateJoinDate = new Date().toISOString()
+
+  const userData = readData()
+  const userIndex = userData.users.findIndex((u) => u.id === userRecord.id)
+  if (userIndex !== -1) {
+    userData.users[userIndex] = userRecord
+    writeData(userData)
+  }
+
+  // Notify user about the new AI debate
+  if (pusherInstance) {
+    pusherInstance.trigger(`user-${userRecord.id}`, "ai-debate-created", {
+      debate: newDebate,
+      message: "You've been matched with an AI diplomat.",
+    })
+
+    // Also trigger on the debates channel
+    pusherInstance.trigger("debates", "debate-created", { debate: newDebate })
+
+    // Generate an initial AI message
+    setTimeout(() => {
+      generateAIMessage(debateId, debateTopic)
+    }, 2000)
+  }
+
+  console.log(`AI debate created for user ${userRecord.email} on topic: ${debateTopic}`)
+  return true
 }
 
 // Generate an AI message in a debate

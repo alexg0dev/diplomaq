@@ -1831,90 +1831,88 @@ function loadChatMessages(debateId) {
       }
       
       // Enhance the chat form to show typing indicators
-      function setupChatForm(debateId) {
-  const chatForm = document.getElementById('chat-form');
-  const chatInput = document.getElementById('chat-input');
-  
-  // Reset form
-  chatForm.reset();
-  
-  // Add typing indicator when user starts typing
-  let typingTimeout;
-  chatInput.addEventListener('input', function() {
-    clearTimeout(typingTimeout);
-    
-    // Only send typing indicator if there's text
-    if (chatInput.value.trim().length > 0) {
-      // Send typing indicator via Pusher
-      if (pusherInstance) {
-        try {
-          pusherInstance.trigger(`debate-${debateId}`, "user-typing", {
-            userId: localStorage.getItem('userId') || userEmail,
-            username: userUsername || userName || userEmail
-          });
-        } catch (error) {
-          console.error('Error sending typing indicator:', error);
-        }
-      }
-    }
-    
-    // Clear typing indicator after 2 seconds of no typing
-    typingTimeout = setTimeout(() => {
-      // Could send a "stopped typing" event here
-    }, 2000);
-  });
-  
-  // Set up form submission
-  chatForm.onsubmit = function(e) {
-    e.preventDefault();
-    
-    const content = chatInput.value.trim();
-    
-    if (!content) return;
-    
-    // Clear input
-    chatInput.value = '';
-    
-    // Create a temporary message element to show immediately
-    const chatContainer = document.getElementById('debate-chat-container');
-    const tempMessage = document.createElement('div');
-    tempMessage.className = 'chat-message user';
-    tempMessage.innerHTML = `
-      <div class="flex items-center mb-1">
-        <img src="${userAvatar || '/placeholder.svg'}" alt="${userName || userEmail}" class="w-5 h-5 rounded-full mr-2">
-        <span class="text-xs font-medium">${userUsername || userName || userEmail}</span>
-      </div>
-      <p>${content}</p>
-    `;
-    chatContainer.appendChild(tempMessage);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
-    
-    // Send message
-    fetch(`/api/debates/${debateId}/messages`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        email: userEmail,
-        content
-      })
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (!data.success) {
-        alert('Error: ' + (data.error || 'Failed to send message'));
-        chatInput.value = content; // Restore input
-        tempMessage.remove(); // Remove temporary message
-      }
-    })
-    .catch(error => {
-      console.error('Error sending message:', error);
-      alert('An error occurred. Please try again later.');
-      chatInput.value = content; // Restore input
-      tempMessage.remove(); // Remove temporary message
-    });
-  };
+      
+function setupChatForm(debateId) {
+ const chatForm = document.getElementById('chat-form');
+ const chatInput = document.getElementById('chat-input');
+ 
+ // Reset form
+ chatForm.reset();
+ 
+ // Add typing indicator when user starts typing
+ let typingTimeout;
+ chatInput.addEventListener('input', function() {
+   clearTimeout(typingTimeout);
+   
+   // Only send typing indicator if there's text
+   if (chatInput.value.trim().length > 0) {
+     // Send typing indicator via Pusher
+     if (pusherInstance) {
+       try {
+         pusherInstance.trigger(`debate-${debateId}`, "user-typing", {
+           userId: localStorage.getItem('userId') || userEmail,
+           username: userUsername || userName || userEmail
+         });
+       } catch (error) {
+         console.error('Error sending typing indicator:', error);
+       }
+     }
+   }
+   
+   // Clear typing indicator after 2 seconds of no typing
+   typingTimeout = setTimeout(() => {
+     // Could send a "stopped typing" event here
+   }, 2000);
+ });
+ 
+ // Set up form submission
+ chatForm.onsubmit = function(e) {
+   e.preventDefault();
+   
+   const content = chatInput.value.trim();
+   
+   if (!content) return;
+   
+   // Clear input
+   chatInput.value = '';
+   
+   // Create a temporary message element to show immediately
+   const chatContainer = document.getElementById('debate-chat-container');
+   const tempMessage = document.createElement('div');
+   tempMessage.className = 'chat-message user';
+   tempMessage.innerHTML = `
+     <div class="flex items-center mb-1">
+       <img src="${userAvatar || '/placeholder.svg'}" alt="${userName || userEmail}" class="w-5 h-5 rounded-full mr-2">
+       <span class="text-xs font-medium">${userUsername || userName || userEmail}</span>
+     </div>
+     <p>${content}</p>
+   `;
+   chatContainer.appendChild(tempMessage);
+   chatContainer.scrollTop = chatContainer.scrollHeight;
+   
+   // Send message
+   fetch(`/api/debates/${debateId}/messages`, {
+     method: 'POST',
+     headers: {
+       'Content-Type': 'application/json'
+     },
+     body: JSON.stringify({
+       email: userEmail,
+       content
+     })
+   })
+   .then(res => res.json())
+   .then(data => {
+     if (!data.success) {
+       console.error('Error sending message:', data.error || 'Failed to send message');
+       // Don't show an alert, just log the error
+     }
+   })
+   .catch(error => {
+     console.error('Error sending message:', error);
+     // Don't show an alert, just log the error
+   });
+ };
 }
       
       // Listen for typing indicators

@@ -2327,6 +2327,11 @@ app.post("/api/debates/:id/vote", (req, res) => {
     return res.status(403).json({ error: "You must join the debate to vote" })
   }
 
+  // Prevent voting for yourself
+  if (user.id === votedFor) {
+    return res.status(400).json({ error: "You cannot vote for yourself" })
+  }
+
   // Initialize votes if not exists
   if (!debate.votes) {
     debate.votes = {}

@@ -244,6 +244,8 @@ function generateAIDebateWithUser(userRecord, council, topic) {
     createdAt: new Date().toISOString(),
     startTime: new Date().toISOString(),
     endTime: null,
+    votes: {},
+    userVotes: {},
   }
 
   // Add debate to debates file
@@ -867,8 +869,39 @@ function createDebate(user1, user2) {
   debatesData.debates.push(newDebate)
   writeDebates(debatesData)
 
+  // Create a welcome message for the debate
+  const welcomeMessage = {
+    id: crypto.randomUUID(),
+    debateId: debateId,
+    userId: "system",
+    email: "system@diplomaq.lol",
+    name: "System",
+    username: "System",
+    avatar: "/placeholder.svg",
+    content: `Welcome to your debate on "${topic}"! The debate has been successfully created and you can now start discussing.`,
+    isSystem: true,
+    timestamp: new Date().toISOString(),
+  }
+
+  // Add message to messages file
+  const messagesPath = path.join(__dirname, "messages.json")
+  let messagesData
+
+  if (fs.existsSync(messagesPath)) {
+    messagesData = fs.readJsonSync(messagesPath)
+  } else {
+    messagesData = { messages: [] }
+  }
+
+  messagesData.messages.push(welcomeMessage)
+  fs.writeJsonSync(messagesPath, messagesData)
+
   // Notify both users
   if (pusherInstance) {
+    // Send welcome message via Pusher
+    pusherInstance.trigger(`debate-${debateId}`, "new-message", welcomeMessage)
+
+    // Notify users about the match
     pusherInstance.trigger(`user-${user1.userId}`, "match-found", { debate: newDebate })
     pusherInstance.trigger(`user-${user2.userId}`, "match-found", { debate: newDebate })
     pusherInstance.trigger("debates", "debate-created", { debate: newDebate })

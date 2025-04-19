@@ -915,7 +915,10 @@ app.post("/api/debates/:id/join", (req, res) => {
     })
   }
 
+  // Read fresh data to ensure we have the latest
   const data = readData()
+  const debatesData = readDebates()
+
   const user = data.users.find((u) => u.email === email)
 
   if (!user) {
@@ -940,7 +943,6 @@ app.post("/api/debates/:id/join", (req, res) => {
     })
   }
 
-  const debatesData = readDebates()
   const debate = debatesData.debates.find((d) => d.id === id)
 
   if (!debate) {
@@ -951,9 +953,21 @@ app.post("/api/debates/:id/join", (req, res) => {
     return res.status(400).json({ error: "This debate is not currently active" })
   }
 
+  // Initialize participants array if it doesn't exist
+  if (!debate.participants) {
+    debate.participants = []
+  }
+
   // Check if user is already a participant
-  if (debate.participants.some((p) => p.email === email)) {
-    return res.status(400).json({ error: "You are already a participant in this debate" })
+  const isParticipant = debate.participants.some((p) => p.email === email)
+
+  if (isParticipant) {
+    // User is already a participant, just return success with the debate data
+    return res.json({
+      success: true,
+      debate,
+      alreadyJoined: true,
+    })
   }
 
   // Add user to participants
@@ -967,7 +981,7 @@ app.post("/api/debates/:id/join", (req, res) => {
   })
 
   // Update user's debate stats
-  user.debatesJoined += 1
+  user.debatesJoined = (user.debatesJoined || 0) + 1
   user.debatesJoinedToday = (user.debatesJoinedToday || 0) + 1
   user.lastDebateJoinDate = new Date().toISOString()
 

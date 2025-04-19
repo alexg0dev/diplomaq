@@ -402,40 +402,6 @@
       transition: 0s;
     }
 
-    /* Subscription cards */
-    .subscription-card {
-      border-radius: 12px;
-      overflow: hidden;
-      transition: all 0.3s ease;
-    }
-    
-    .subscription-card:hover {
-      transform: translateY(-10px);
-      box-shadow: 0 20px 30px rgba(0, 0, 0, 0.1);
-    }
-    
-    .subscription-card .header {
-      padding: 20px;
-      color: white;
-      font-weight: bold;
-    }
-    
-    .subscription-card .free-header {
-      background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
-    }
-    
-    .subscription-card .pro-header {
-      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-    }
-    
-    .subscription-card .elite-header {
-      background: linear-gradient(135deg, #818cf8 0%, #4f46e5 100%);
-    }
-    
-    .subscription-card .institutional-header {
-      background: linear-gradient(135deg, #c084fc 0%, #9333ea 100%);
-    }
-    
     /* Username modal */
     .modal {
       display: none;
@@ -556,6 +522,27 @@
       bottom: -15px;
       right: -15px;
     }
+
+    /* Mobile optimizations */
+    @media (max-width: 768px) {
+      .slogan-carousel {
+        height: 60px;
+      }
+      
+      .slogan-carousel-inner {
+        animation: scrollSlogans 12s linear infinite;
+      }
+      
+      @keyframes scrollSlogans {
+        0% { transform: translateY(0); }
+        16.66% { transform: translateY(0); }
+        33.33% { transform: translateY(-60px); }
+        50% { transform: translateY(-60px); }
+        66.66% { transform: translateY(-120px); }
+        83.33% { transform: translateY(-120px); }
+        100% { transform: translateY(0); }
+      }
+    }
   </style>
 </head>
 <body>
@@ -580,99 +567,12 @@
           </a>
         </div>
         <div class="hidden md:flex space-x-6">
-          <!-- Enhanced Navigation Links with Dropdowns -->
-          <div class="dropdown" id="features-dropdown">
-            <a href="#features" class="text-gray-600 hover:text-[#1f1d79] transition flex items-center">
-              Features
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </a>
-            <div class="dropdown-content mt-2">
-              <a href="#debates" class="block px-4 py-3 hover:bg-gray-50 transition border-b border-gray-100">
-                <div class="font-medium text-[#1f1d79]">Political Debates</div>
-                <div class="text-xs text-gray-500">Engage in real-time discussions</div>
-              </a>
-              <a href="#mun" class="block px-4 py-3 hover:bg-gray-50 transition border-b border-gray-100">
-                <div class="font-medium text-[#c75495]">Diplomatic Simulation</div>
-                <div class="text-xs text-gray-500">Authentic diplomatic experience</div>
-              </a>
-              <a href="#learning" class="block px-4 py-3 hover:bg-gray-50 transition">
-                <div class="font-medium text-[#005791]">Learning Center</div>
-                <div class="text-xs text-gray-500">Improve your debate skills</div>
-              </a>
-            </div>
-          </div>
-          
-          <div class="dropdown" id="debates-dropdown">
-            <a href="#debates" class="text-gray-600 hover:text-[#1f1d79] transition flex items-center">
-              Debates
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </a>
-            <div class="dropdown-content mt-2">
-              <a href="#" class="block px-4 py-3 hover:bg-gray-50 transition border-b border-gray-100">
-                <div class="font-medium text-[#1f1d79]">Live Debates</div>
-                <div class="text-xs text-gray-500">Join ongoing discussions</div>
-              </a>
-              <a href="#" class="block px-4 py-3 hover:bg-gray-50 transition border-b border-gray-100">
-                <div class="font-medium text-[#1f1d79]">Scheduled Debates</div>
-                <div class="text-xs text-gray-500">Upcoming debate sessions</div>
-              </a>
-              <a href="#" class="block px-4 py-3 hover:bg-gray-50 transition">
-                <div class="font-medium text-[#1f1d79]">Create Debate</div>
-                <div class="text-xs text-gray-500">Start your own discussion</div>
-              </a>
-            </div>
-          </div>
-          
-          <div class="dropdown" id="mun-dropdown">
-            <a href="#mun" class="text-gray-600 hover:text-[#1f1d79] transition flex items-center">
-              Diplomacy
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </a>
-            <div class="dropdown-content mt-2">
-              <a href="#" class="block px-4 py-3 hover:bg-gray-50 transition border-b border-gray-100">
-                <div class="font-medium text-[#c75495]">Global Affairs</div>
-                <div class="text-xs text-gray-500">International relations simulation</div>
-              </a>
-              <a href="#" class="block px-4 py-3 hover:bg-gray-50 transition border-b border-gray-100">
-                <div class="font-medium text-[#c75495]">Crisis Management</div>
-                <div class="text-xs text-gray-500">Respond to global challenges</div>
-              </a>
-              <a href="#" class="block px-4 py-3 hover:bg-gray-50 transition">
-                <div class="font-medium text-[#c75495]">Model UN</div>
-                <div class="text-xs text-gray-500">MUN experience</div>
-              </a>
-            </div>
-          </div>
-          
-          <div class="dropdown" id="learning-dropdown">
-            <a href="#learning" class="text-gray-600 hover:text-[#1f1d79] transition flex items-center">
-              Learning
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </a>
-            <div class="dropdown-content mt-2">
-              <a href="#" class="block px-4 py-3 hover:bg-gray-50 transition border-b border-gray-100">
-                <div class="font-medium text-[#005791]">Topics</div>
-                <div class="text-xs text-gray-500">Explore global issues</div>
-              </a>
-              <a href="#" class="block px-4 py-3 hover:bg-gray-50 transition border-b border-gray-100">
-                <div class="font-medium text-[#005791]">Debate Skills</div>
-                <div class="text-xs text-gray-500">Improve your technique</div>
-              </a>
-              <a href="#" class="block px-4 py-3 hover:bg-gray-50 transition">
-                <div class="font-medium text-[#005791]">Resources</div>
-                <div class="text-xs text-gray-500">Research materials</div>
-              </a>
-            </div>
-          </div>
-          <a href="subscriptions.html" class="text-gray-600 hover:text-[#1f1d79] transition">Subscriptions</a>
+          <!-- Simplified Navigation Links with Direct Page Links -->
+          <a href="index.html" class="text-gray-600 hover:text-[#1f1d79] transition">Home</a>
+          <a href="debates.html" class="text-gray-600 hover:text-[#1f1d79] transition">Debates</a>
+          <a href="profile.html" class="text-gray-600 hover:text-[#1f1d79] transition">Profile</a>
+          <a href="dashboard.html" class="text-gray-600 hover:text-[#1f1d79] transition">Dashboard</a>
+          <a href="learning.html" class="text-gray-600 hover:text-[#1f1d79] transition">Learning</a>
         </div>
         <div>
           <a href="signin.html" id="sign-in-btn" class="px-4 py-2 border-2 border-[#1f1d79] text-[#1f1d79] font-medium rounded-md hover:bg-[#1f1d79] hover:text-white transition">Sign In</a>
@@ -689,11 +589,11 @@
       
       <!-- Mobile menu -->
       <div id="mobile-menu" class="md:hidden hidden mt-4 animate__animated animate__fadeIn">
-        <a href="#features" class="block py-2 text-gray-600 hover:text-[#1f1d79] transition">Features</a>
-        <a href="#debates" class="block py-2 text-gray-600 hover:text-[#1f1d79] transition">Debates</a>
-        <a href="#mun" class="block py-2 text-gray-600 hover:text-[#1f1d79] transition">Diplomacy</a>
-        <a href="#learning" class="block py-2 text-gray-600 hover:text-[#1f1d79] transition">Learning</a>
-        <a href="subscriptions.html" class="block py-2 text-gray-600 hover:text-[#1f1d79] transition">Subscriptions</a>
+        <a href="index.html" class="block py-2 text-gray-600 hover:text-[#1f1d79] transition">Home</a>
+        <a href="debates.html" class="block py-2 text-gray-600 hover:text-[#1f1d79] transition">Debates</a>
+        <a href="profile.html" class="block py-2 text-gray-600 hover:text-[#1f1d79] transition">Profile</a>
+        <a href="dashboard.html" class="block py-2 text-gray-600 hover:text-[#1f1d79] transition">Dashboard</a>
+        <a href="learning.html" class="block py-2 text-gray-600 hover:text-[#1f1d79] transition">Learning</a>
         <a href="https://ko-fi.com/diplomaq" target="_blank" class="block py-2 text-[#29abe0] hover:text-[#228fc0] transition">Support Us on Ko-fi</a>
       </div>
     </div>
@@ -717,24 +617,22 @@
             </div>
             
             <!-- Slogan Carousel -->
+            <div class="slogan-carousel mb-6">
+              <div class="slogan-carousel-inner">
+                <div class="h-10 flex items-center text-lg text-[#454545]">Fight for your values through structured debate</div>
+                <div class="h-10 flex items-center text-lg text-[#454545]">Make your voice heard on issues that matter</div>
+                <div class="h-10 flex items-center text-lg text-[#454545]">Develop critical thinking through political discourse</div>
+              </div>
+            </div>
             
-<div class="slogan-carousel mb-6">
-  <div class="slogan-carousel-inner">
-    <div class="h-10 flex items-center text-lg text-[#454545]">Fight for your values through structured debate</div>
-    <div class="h-10 flex items-center text-lg text-[#454545]">Make your voice heard on issues that matter</div>
-    <div class="h-10 flex items-center text-lg text-[#454545]">Develop critical thinking through political discourse</div>
-  </div>
-</div>
-            
-
             <p class="text-lg text-gray-600 mb-8">Experience real-world diplomacy through our immersive platform. Engage in debates, represent positions, and solve global challenges - all from your computer.</p>
 
             <div class="flex flex-wrap gap-4">
               <a href="signin.html" class="px-8 py-3 bg-white text-[#1f1d79] font-semibold rounded-full shadow-lg hover:bg-gray-100 transition">
                 Create Free Account
               </a>
-              <a href="https://ko-fi.com/diplomaq/shop" target="_blank" class="px-8 py-3 rounded-full border-2 border-[#1f1d79] text-[#1f1d79] font-semibold hover:bg-[#1f1d79] hover:text-white transition-colors">
-                View Plans
+              <a href="debates.html" class="px-8 py-3 rounded-full border-2 border-[#1f1d79] text-[#1f1d79] font-semibold hover:bg-[#1f1d79] hover:text-white transition-colors">
+                Start Debating
               </a>
             </div>
 
@@ -943,7 +841,7 @@
             <span>Interfaith Dialogue and Cooperation</span>
           </li>
         </ul>
-        <a href="#" class="text-[#1f1d79] font-medium hover:underline flex items-center">
+        <a href="debates.html" class="text-[#1f1d79] font-medium hover:underline flex items-center">
           Explore Topics
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
@@ -974,7 +872,7 @@
             <span>Nationalism and Globalism</span>
           </li>
         </ul>
-        <a href="#" class="text-[#ff6309] font-medium hover:underline flex items-center">
+        <a href="debates.html" class="text-[#ff6309] font-medium hover:underline flex items-center">
           Explore Topics
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
@@ -1005,7 +903,7 @@
             <span>Economic Justice and Opportunity</span>
           </li>
         </ul>
-        <a href="#" class="text-[#005791] font-medium hover:underline flex items-center">
+        <a href="debates.html" class="text-[#005791] font-medium hover:underline flex items-center">
           Explore Topics
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
@@ -1015,126 +913,6 @@
     </div>
   </div>
 </section>
-
-<!-- Add the Youth Parliament section after the Debate Topics section -->
-<section id="youth-parliament" class="py-16 px-4 bg-white">
-  <div class="container mx-auto max-w-6xl">
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-      <div data-aos="fade-right" data-aos-delay="100">
-        <h2 class="text-3xl md:text-4xl font-bold text-[#1f1d79] mb-6">Find Your Nearest Youth Parliament</h2>
-        <p class="text-lg text-gray-600 mb-6">We'll help you connect with your local youth parliament program and guide you through the entire process. If we can't successfully place you, we'll refund your money - guaranteed.</p>
-        
-        <div class="space-y-4 mb-8">
-          <div class="flex items-start">
-            <div class="w-10 h-10 rounded-full bg-[#e9e7fc] flex items-center justify-center mr-4 mt-1 flex-shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#1f1d79]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012- 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-            </div>
-            <div>
-              <h3 class="font-semibold text-[#1f1d79] text-lg">Complete Application</h3>
-              <p class="text-gray-600">Fill out our simple form with your location and interests.</p>
-            </div>
-          </div>
-          
-          <div class="flex items-start">
-            <div class="w-10 h-10 rounded-full bg-[#fde8d4] flex items-center justify-center mr-4 mt-1 flex-shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#ff6309]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            </div>
-            <div>
-              <h3 class="font-semibold text-[#1f1d79] text-lg">We Make Connections</h3>
-              <p class="text-gray-600">Our team will connect you with the appropriate youth parliament program in your area.</p>
-            </div>
-          </div>
-          
-          <div class="flex items-start">
-            <div class="w-10 h-10 rounded-full bg-[#d0e8f2] flex items-center justify-center mr-4 mt-1 flex-shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#005791]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div>
-              <h3 class="font-semibold text-[#1f1d79] text-lg">Money-Back Guarantee</h3>
-              <p class="text-gray-600">If we can't successfully place you, we'll refund your payment in full.</p>
-            </div>
-          </div>
-        </div>
-        
-        <button id="open-parliament-form" class="px-8 py-3 gradient-button text-white font-semibold rounded-full shadow-lg inline-flex items-center">
-          Get Started
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-          </svg>
-        </button>
-      </div>
-      
-      <div data-aos="fade-left" data-aos-delay="300" class="relative">
-        <div class="relative z-10 overflow-hidden rounded-lg shadow-xl">
-          <img src="https://media.discordapp.net/attachments/1270881377201557504/1362638038353575956/raw.png?ex=68031f10&is=6801cd90&hm=a6e68db11fc8ca5dcc947413434d4930a65157baa3579fb5a5d3fc608e476584&=&format=webp&quality=lossless&width=790&height=527" 
-               alt="Youth Parliament Connections" 
-               class="rounded-lg w-full transform transition-transform duration-700 hover:scale-105" />
-          <div class="absolute inset-0 bg-gradient-to-t from-[#1f1d79]/30 to-transparent rounded-lg"></div>
-          <div class="absolute bottom-4 left-4 text-white font-bold text-xl">Our Extensive Network</div>
-        </div>
-        
-        <div class="absolute -top-6 -right-6 z-0">
-          <div class="w-24 h-24 bg-[#ff6309] rounded-full opacity-20"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Add the Youth Parliament Modal Form -->
-<div id="parliament-modal" class="modal">
-  <div class="modal-content">
-    <div class="flex justify-between items-center mb-6">
-      <h3 class="text-2xl font-bold text-[#1f1d79]">Youth Parliament Application</h3>
-      <button id="close-parliament-modal" class="text-gray-500 hover:text-gray-700">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-    </div>
-    
-    <form id="parliament-form" class="space-y-4">
-      <div>
-        <label for="parliament-name" class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-        <input type="text" id="parliament-name" name="name" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]">
-      </div>
-      
-      <div>
-        <label for="parliament-email" class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-        <input type="email" id="parliament-email" name="email" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]">
-      </div>
-      
-      <div>
-        <label for="parliament-location" class="block text-sm font-medium text-gray-700 mb-1">Your Location (City/Country)</label>
-        <input type="text" id="parliament-location" name="location" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]">
-      </div>
-      
-      <div>
-        <label for="parliament-age" class="block text-sm font-medium text-gray-700 mb-1">Age</label>
-        <input type="number" id="parliament-age" name="age" min="13" max="30" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]">
-      </div>
-      
-      <div>
-        <label for="parliament-interests" class="block text-sm font-medium text-gray-700 mb-1">Political Interests</label>
-        <textarea id="parliament-interests" name="interests" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1f1d79]" placeholder="Tell us about your political interests and why you want to join a youth parliament..."></textarea>
-      </div>
-      
-      <div class="pt-4">
-        <button type="submit" class="w-full py-3 gradient-button text-white font-semibold rounded-md">Submit Application</button>
-      </div>
-      
-      <p class="text-xs text-gray-500 text-center mt-4">
-        By submitting this form, you agree to our <a href="#" class="text-[#1f1d79] hover:underline">Terms of Service</a> and <a href="#" class="text-[#1f1d79] hover:underline">Privacy Policy</a>.
-      </p>
-    </form>
-  </div>
-</div>
 
     <!-- Make Your Voice Heard Section -->
 <section class="py-16 px-4 bg-[#f0f4fc] relative overflow-hidden">
@@ -1183,7 +961,7 @@
           </div>
         </div>
         
-        <a href="signin.html" class="px-8 py-3 gradient-button text-white font-semibold rounded-full shadow-lg inline-flex items-center">
+        <a href="debates.html" class="px-8 py-3 gradient-button text-white font-semibold rounded-full shadow-lg inline-flex items-center">
           Start Debating Now
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
@@ -1217,8 +995,8 @@
           <a href="signin.html" class="px-8 py-3 bg-white text-[#1f1d79] font-semibold rounded-full shadow-lg hover:bg-gray-100 transition">
             Create Free Account
           </a>
-          <a href="subscriptions.html" class="px-8 py-3 border-2 border-white text-white font-semibold rounded-full hover:bg-white hover:text-[#1f1d79] transition">
-            Explore Subscription Plans
+          <a href="debates.html" class="px-8 py-3 border-2 border-white text-white font-semibold rounded-full hover:bg-white hover:text-[#1f1d79] transition">
+            Start Debating Now
           </a>
         </div>
       </div>
@@ -1260,11 +1038,11 @@
         <div>
           <h4 class="text-lg font-semibold mb-4">Quick Links</h4>
           <ul class="space-y-2">
-            <li><a href="#" class="text-gray-200 hover:text-white transition">Home</a></li>
-            <li><a href="#" class="text-gray-200 hover:text-white transition">About Us</a></li>
-            <li><a href="#" class="text-gray-200 hover:text-white transition">Features</a></li>
-            <li><a href="https://ko-fi.com/diplomaq/shop" target="_blank" class="text-gray-200 hover:text-white transition">Pricing</a></li>
-            <li><a href="#" class="text-gray-200 hover:text-white transition">Contact</a></li>
+            <li><a href="index.html" class="text-gray-200 hover:text-white transition">Home</a></li>
+            <li><a href="debates.html" class="text-gray-200 hover:text-white transition">Debates</a></li>
+            <li><a href="profile.html" class="text-gray-200 hover:text-white transition">Profile</a></li>
+            <li><a href="dashboard.html" class="text-gray-200 hover:text-white transition">Dashboard</a></li>
+            <li><a href="learning.html" class="text-gray-200 hover:text-white transition">Learning</a></li>
           </ul>
         </div>
         
@@ -1282,7 +1060,7 @@
         <div>
           <h4 class="text-lg font-semibold mb-4">Contact Us</h4>
           <p class="text-gray-200 mb-4">Have questions or feedback? We'd love to hear from you!</p>
-          <a href="mailto:parliament@diplomaq.lol" class="text-white hover:underline">parliament@diplomaq.lol</a>
+          <a href="mailto:info@diplomaq.lol" class="text-white hover:underline">info@diplomaq.lol</a>
           <div class="mt-4">
             <a href="https://ko-fi.com/diplomaq" target="_blank" class="kofi-button">
               <img src="https://storage.ko-fi.com/cdn/cup-border.png" alt="Ko-fi cup" />
@@ -1314,74 +1092,8 @@
       }
     });
 
-    // Dropdown functionality
+    // Check if user is already logged in
     document.addEventListener('DOMContentLoaded', function() {
-      const dropdowns = document.querySelectorAll('.dropdown');
-      
-      // For desktop - click to toggle
-      dropdowns.forEach(dropdown => {
-        const trigger = dropdown.querySelector('a');
-        if (trigger) {
-          trigger.addEventListener('click', function(e) {
-            // First prevent the default behavior to avoid navigation
-            e.preventDefault();
-            
-            // Close all other dropdowns
-            dropdowns.forEach(d => {
-              if (d !== dropdown) {
-                d.classList.remove('active');
-              }
-            });
-            
-            // Toggle current dropdown
-            dropdown.classList.toggle('active');
-            e.stopPropagation();
-          });
-        }
-      });
-      
-      // Close dropdowns when clicking elsewhere
-      document.addEventListener('click', function() {
-        dropdowns.forEach(dropdown => {
-          dropdown.classList.remove('active');
-        });
-      });
-
-      // Youth Parliament Modal
-      const openParliamentBtn = document.getElementById('open-parliament-form');
-      const parliamentModal = document.getElementById('parliament-modal');
-      const closeParliamentModal = document.getElementById('close-parliament-modal');
-      const parliamentForm = document.getElementById('parliament-form');
-      
-      if (openParliamentBtn && parliamentModal) {
-        openParliamentBtn.addEventListener('click', function() {
-          parliamentModal.classList.add('active');
-        });
-        
-        closeParliamentModal.addEventListener('click', function() {
-          parliamentModal.classList.remove('active');
-        });
-        
-        parliamentForm.addEventListener('submit', function(e) {
-          e.preventDefault();
-          
-          const formData = new FormData(parliamentForm);
-          const formDataObj = {};
-          formData.forEach((value, key) => {
-            formDataObj[key] = value;
-          });
-          
-          // Open email client directly
-          window.location.href = `mailto:parliament@diplomaq.lol?subject=Youth Parliament Application&body=Name: ${formDataObj.name}%0D%0AEmail: ${formDataObj.email}%0D%0ALocation: ${formDataObj.location}%0D%0AAge: ${formDataObj.age}%0D%0AInterests: ${formDataObj.interests}`;
-          
-          // Close modal and reset form
-          parliamentModal.classList.remove('active');
-          parliamentForm.reset();
-          alert('Your application has been submitted! Your email app should open to complete the process.');
-        });
-      }
-      
-      // Check if user is already logged in
       const userToken = localStorage.getItem('userToken');
       const userEmail = localStorage.getItem('userEmail');
       const userName = localStorage.getItem('userName');
@@ -1397,26 +1109,6 @@
             </div>
           `;
           signInBtn.href = "profile.html";
-          
-          // Add subscription badge if user has a paid plan
-          const subscription = localStorage.getItem('userSubscription');
-          if (subscription && subscription !== 'free') {
-            const badge = document.createElement('div');
-            badge.className = 'ml-2 px-2 py-0.5 text-xs font-bold rounded-full';
-            
-            if (subscription === 'pro') {
-              badge.className += ' bg-yellow-500 text-white';
-              badge.textContent = 'PRO';
-            } else if (subscription === 'elite') {
-              badge.className += ' bg-indigo-500 text-white';
-              badge.textContent = 'ELITE';
-            } else if (subscription === 'institutional') {
-              badge.className += ' bg-purple-500 text-white';
-              badge.textContent = 'INSTITUTIONAL';
-            }
-            
-            signInBtn.appendChild(badge);
-          }
         }
       }
     });
@@ -1441,7 +1133,6 @@
           localStorage.setItem('userEmail', data.user.email);
           localStorage.setItem('userName', data.user.name);
           localStorage.setItem('userAvatar', data.user.avatar);
-          localStorage.setItem('userSubscription', data.user.subscription || 'free');
           
           // Check if username exists
           if (data.user.username) {

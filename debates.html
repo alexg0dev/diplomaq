@@ -356,6 +356,15 @@
         <a href="signin.html" class="px-6 py-3 gradient-button text-white font-semibold rounded-md">Sign In</a>
       </div>
       
+      <!-- Alert for errors -->
+      <div id="error-alert" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 hidden" role="alert">
+        <strong class="font-bold">Error: </strong>
+        <span id="error-message" class="block sm:inline"></span>
+        <span id="error-dismiss" class="absolute top-0 bottom-0 right-0 px-4 py-3">
+          <svg class="fill-current h-6 w-6 text-red-500" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><title>Close</title><path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/></svg>
+        </span>
+      </div>
+      
       <!-- Filter Section -->
       <div class="bg-white rounded-xl shadow-md p-6 mb-8">
         <div class="flex flex-col md:flex-row gap-4">
@@ -1380,66 +1389,72 @@
   debateViewModal.classList.add('active');
 }
       
-      function loadChatMessages(debateId) {
-        const chatContainer = document.getElementById('debate-chat-container');
+function loadChatMessages(debateId) {
+  const chatContainer = document.getElementById('debate-chat-container');
+  
+  // Add a mutation observer to automatically scroll to the bottom when new messages are added
+  const observer = new MutationObserver(function(mutations) {
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+  });
+  
+  observer.observe(chatContainer, { childList: true });
+  
+  // Show loading indicator
+  chatContainer.innerHTML = `
+    <div class="flex justify-center items-center py-4">
+      <div class="spinner"></div>
+    </div>
+  `;
+  
+  // Fetch messages
+  fetch(`/api/debates/${debateId}/messages`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.messages && data.messages.length > 0) {
+        chatContainer.innerHTML = '';
         
-        // Add a mutation observer to automatically scroll to the bottom when new messages are added
-        const observer = new MutationObserver(function(mutations) {
-          chatContainer.scrollTop = chatContainer.scrollHeight;
+        // Render messages
+        data.messages.forEach(message => {
+          const isCurrentUser = message.email === userEmail;
+          const messageClass = isCurrentUser ? 'user' : message.isAI ? 'ai' : 'other';
+          
+          const messageElement = document.createElement('div');
+          messageElement.className = `chat-message ${messageClass}`;
+          messageElement.innerHTML = `
+            <div class="flex items-center mb-1">
+              <img src="${message.avatar || '/placeholder.svg'}" alt="${message.name || 'User'}" class="w-5 h-5 rounded-full mr-2">
+              <span class="text-xs font-medium">${message.username || message.name || message.email}</span>
+              ${message.isAI ? '<span class="ml-1 text-xs bg-purple-100 text-purple-800 px-1 rounded">AI</span>' : ''}
+            </div>
+            <p>${message.content}</p>
+          `;
+          
+          chatContainer.appendChild(messageElement);
         });
         
-        observer.observe(chatContainer, { childList: true });
-        
-        // Show loading
+        // Scroll to bottom
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      } else {
         chatContainer.innerHTML = `
-          <div class="flex justify-center items-center py-4">
-            <div class="spinner"></div>
+          <div class="text-center text-gray-500 py-4">
+            No messages yet. Be the first to contribute to this debate!
           </div>
         `;
-        
-        // Fetch messages
-        fetch(`/api/debates/${debateId}/messages`)
-          .then(res => res.json())
-          .then(data => {
-            if (data.messages && data.messages.length > 0) {
-              chatContainer.innerHTML = data.messages.map(message => {
-                const isCurrentUser = message.email === userEmail;
-                const messageClass = isCurrentUser ? 'user' : message.isAI ? 'ai' : 'other';
-                
-                return `
-                  <div class="chat-message ${messageClass}">
-                    <div class="flex items-center mb-1">
-                      <img src="${message.avatar || '/placeholder.svg'}" alt="${message.name}" class="w-5 h-5 rounded-full mr-2">
-                      <span class="text-xs font-medium">${message.username || message.name}</span>
-                      ${message.isAI ? '<span class="ml-1 text-xs bg-purple-100 text-purple-800 px-1 rounded">AI</span>' : ''}
-                    </div>
-                    <p>${message.content}</p>
-                  </div>
-                `;
-              }).join('');
-              
-              // Scroll to bottom
-              chatContainer.scrollTop = chatContainer.scrollHeight;
-            } else {
-              chatContainer.innerHTML = `
-                <div class="text-center text-gray-500 py-4">
-                  No messages yet. Be the first to contribute to this debate!
-                </div>
-              `;
-            }
-            
-            // Set up Pusher for real-time updates
-            setupPusher(debateId);
-          })
-          .catch(error => {
-            console.error('Error loading messages:', error);
-            chatContainer.innerHTML = `
-              <div class="text-center text-red-500 py-4">
-                Error loading messages. Please try again later.
-              </div>
-            `;
-          });
       }
+      
+      // Set up Pusher for real-time updates
+      setupPusher(debateId);
+    })
+    .catch(error => {
+      console.error('Error loading messages:', error);
+      chatContainer.innerHTML = `
+        <div class="text-center text-red-500 py-4">
+          Error loading messages. Please try again later.
+          <button class="block mx-auto mt-2 px-4 py-2 border border-red-500 text-red-500 rounded-md hover:bg-red-500 hover:text-white transition" onclick="loadChatMessages('${debateId}')">Retry</button>
+        </div>
+      `;
+    });
+}
       
       let pusherInstance;
       
@@ -1817,66 +1832,90 @@
       
       // Enhance the chat form to show typing indicators
       function setupChatForm(debateId) {
-        const chatForm = document.getElementById('chat-form');
-        const chatInput = document.getElementById('chat-input');
-        
-        // Add typing indicator when user starts typing
-        let typingTimeout;
-        chatInput.addEventListener('input', function() {
-          clearTimeout(typingTimeout);
-          
-          // Only send typing indicator if there's text
-          if (chatInput.value.trim().length > 0) {
-            // Send typing indicator via Pusher
-            if (pusherInstance) {
-              pusherInstance.trigger(`debate-${debateId}`, "user-typing", {
-                userId: localStorage.getItem('userId'),
-                username: userUsername || userName || userEmail
-              });
-            }
-          }
-          
-          // Clear typing indicator after 2 seconds of no typing
-          typingTimeout = setTimeout(() => {
-            // Could send a "stopped typing" event here
-          }, 2000);
-        });
-        
-        chatForm.onsubmit = function(e) {
-          e.preventDefault();
-          
-          const content = chatInput.value.trim();
-          
-          if (!content) return;
-          
-          // Clear input
-          chatInput.value = '';
-          
-          // Send message
-          fetch(`/api/debates/${debateId}/messages`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              email: userEmail,
-              content
-            })
-          })
-          .then(res => res.json())
-          .then(data => {
-            if (!data.success) {
-              alert('Error: ' + (data.error || 'Failed to send message'));
-              chatInput.value = content; // Restore input
-            }
-          })
-          .catch(error => {
-            console.error('Error sending message:', error);
-            alert('An error occurred. Please try again later.');
-            chatInput.value = content; // Restore input
+  const chatForm = document.getElementById('chat-form');
+  const chatInput = document.getElementById('chat-input');
+  
+  // Reset form
+  chatForm.reset();
+  
+  // Add typing indicator when user starts typing
+  let typingTimeout;
+  chatInput.addEventListener('input', function() {
+    clearTimeout(typingTimeout);
+    
+    // Only send typing indicator if there's text
+    if (chatInput.value.trim().length > 0) {
+      // Send typing indicator via Pusher
+      if (pusherInstance) {
+        try {
+          pusherInstance.trigger(`debate-${debateId}`, "user-typing", {
+            userId: localStorage.getItem('userId') || userEmail,
+            username: userUsername || userName || userEmail
           });
-        };
+        } catch (error) {
+          console.error('Error sending typing indicator:', error);
+        }
       }
+    }
+    
+    // Clear typing indicator after 2 seconds of no typing
+    typingTimeout = setTimeout(() => {
+      // Could send a "stopped typing" event here
+    }, 2000);
+  });
+  
+  // Set up form submission
+  chatForm.onsubmit = function(e) {
+    e.preventDefault();
+    
+    const content = chatInput.value.trim();
+    
+    if (!content) return;
+    
+    // Clear input
+    chatInput.value = '';
+    
+    // Create a temporary message element to show immediately
+    const chatContainer = document.getElementById('debate-chat-container');
+    const tempMessage = document.createElement('div');
+    tempMessage.className = 'chat-message user';
+    tempMessage.innerHTML = `
+      <div class="flex items-center mb-1">
+        <img src="${userAvatar || '/placeholder.svg'}" alt="${userName || userEmail}" class="w-5 h-5 rounded-full mr-2">
+        <span class="text-xs font-medium">${userUsername || userName || userEmail}</span>
+      </div>
+      <p>${content}</p>
+    `;
+    chatContainer.appendChild(tempMessage);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    
+    // Send message
+    fetch(`/api/debates/${debateId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        email: userEmail,
+        content
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (!data.success) {
+        alert('Error: ' + (data.error || 'Failed to send message'));
+        chatInput.value = content; // Restore input
+        tempMessage.remove(); // Remove temporary message
+      }
+    })
+    .catch(error => {
+      console.error('Error sending message:', error);
+      alert('An error occurred. Please try again later.');
+      chatInput.value = content; // Restore input
+      tempMessage.remove(); // Remove temporary message
+    });
+  };
+}
       
       // Listen for typing indicators
       if (pusherInstance) {

@@ -15,25 +15,23 @@ const cookieParser = require("cookie-parser")
 // Load environment variables
 dotenv.config()
 
-// Import custom JS files
-// Import and initialize matchmaking module
+// Import custom modules
 const matchmaking = require("./matchmaking.js")
-
-// Add this near the top of the file with other requires
 const debateHandler = require("./debate-handler")
 
 // Initialize express app
 const app = express()
 const PORT = process.env.PORT || 3000
 
-// Google OAuth configuration with hardcoded credentials
-const GOOGLE_CLIENT_ID = "741864469861-v3jmuek30cf8pvhdgd27d100nmpt4ot7.apps.googleusercontent.com"
-const GOOGLE_CLIENT_SECRET = "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"
-const JWT_SECRET = "diplomaq-secret-key" // Hardcoded JWT secret
-const REDIRECT_URI = "https://diplomaq-production.up.railway.app/api/auth/callback/google" // Hardcoded redirect URI
-const FRONTEND_URL = "https://diplomaq-production.up.railway.app" // Hardcoded frontend URL
+// Google OAuth configuration using environment variables
+const GOOGLE_CLIENT_ID =
+  process.env.GOOGLE_CLIENT_ID || "741864469861-v3jmuek30cf8pvhdgd27d100nmpt4ot7.apps.googleusercontent.com"
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "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"
+const JWT_SECRET = process.env.JWT_SECRET || "diplomaq-secret-key" // JWT secret
+const REDIRECT_URI = process.env.REDIRECT_URI || "https://diplomaq-production.up.railway.app/api/auth/callback/google"
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://diplomaq-production.up.railway.app"
 
-// Initialize Google OAuth2 client with the correct configuration
+// Initialize Google OAuth2 client
 const googleClient = new OAuth2Client({
   clientId: GOOGLE_CLIENT_ID,
   clientSecret: GOOGLE_CLIENT_SECRET,
@@ -45,14 +43,14 @@ const ADMIN_EMAILS = ["alexandroghanem@gmail.com", "alexandroghanem1@gmail.com"]
 
 // Initialize Pusher using environment variables
 const pusher = new Pusher({
-  appId: process.env.PUSHER_APP_ID,
-  key: process.env.PUSHER_KEY,
-  secret: process.env.PUSHER_SECRET,
+  appId: process.env.PUSHER_APP_ID || "1722312",
+  key: process.env.PUSHER_KEY || "e0e0b1c2d82c9f93b0cb",
+  secret: process.env.PUSHER_SECRET || "adbb7035-7f57-49ca-b3ee-5844ecb07a53",
   cluster: process.env.PUSHER_CLUSTER || "eu",
   useTLS: true,
 })
 
-// Initialize PostgreSQL connection (if available)
+// Initialize PostgreSQL connection using environment variables
 let pool
 try {
   if (process.env.DATABASE_URL) {
@@ -60,7 +58,7 @@ try {
       connectionString: process.env.DATABASE_URL,
       ssl: { rejectUnauthorized: false },
     })
-    console.log("PostgreSQL connection initialized")
+    console.log("PostgreSQL connection initialized using DATABASE_URL")
   }
 } catch (error) {
   console.error("Error initializing PostgreSQL:", error)
@@ -89,65 +87,7 @@ if (!fs.existsSync(DATA_FILE)) {
 }
 
 if (!fs.existsSync(DEBATES_FILE)) {
-  fs.writeJsonSync(DEBATES_FILE, {
-    debates: [
-      {
-        id: "1",
-        title: "Climate Change Solutions",
-        description: "Discussing effective policies to combat climate change",
-        council: "UNEP",
-        status: "active",
-        participants: [],
-        createdAt: new Date().toISOString(),
-        startTime: new Date().toISOString(),
-        endTime: null,
-      },
-      {
-        id: "2",
-        title: "Global Health Crisis Response",
-        description: "Strategies for international cooperation during health emergencies",
-        council: "WHO",
-        status: "active",
-        participants: [],
-        createdAt: new Date().toISOString(),
-        startTime: new Date().toISOString(),
-        endTime: null,
-      },
-      {
-        id: "3",
-        title: "Nuclear Disarmament",
-        description: "Discussing the path to global nuclear disarmament",
-        council: "UNSC",
-        status: "active",
-        participants: [],
-        createdAt: new Date().toISOString(),
-        startTime: new Date().toISOString(),
-        endTime: null,
-      },
-      {
-        id: "4",
-        title: "Refugee Crisis Management",
-        description: "Addressing the global refugee crisis and humanitarian response",
-        council: "UNHRC",
-        status: "active",
-        participants: [],
-        createdAt: new Date().toISOString(),
-        startTime: new Date().toISOString(),
-        endTime: null,
-      },
-      {
-        id: "5",
-        title: "Sustainable Development Goals",
-        description: "Progress and challenges in achieving the UN SDGs",
-        council: "ECOSOC",
-        status: "scheduled",
-        participants: [],
-        createdAt: new Date().toISOString(),
-        startTime: new Date(Date.now() + 86400000).toISOString(), // Tomorrow
-        endTime: null,
-      },
-    ],
-  })
+  fs.writeJsonSync(DEBATES_FILE, { debates: [] }) // No template debates
 }
 
 if (!fs.existsSync(MESSAGES_FILE)) {
@@ -165,7 +105,7 @@ if (!fs.existsSync(MATCHMAKING_FILE)) {
   })
 }
 
-// Helper functions
+// Helper functions for file operations
 const readData = () => {
   try {
     return fs.readJsonSync(DATA_FILE)
@@ -357,7 +297,7 @@ const unbanUser = (email, adminEmail) => {
   return { success: true, unbannedUser: email }
 }
 
-// Add this function after the writeData function to handle Google authentication
+// Verify Google token
 const verifyGoogleToken = async (token) => {
   try {
     const ticket = await googleClient.verifyIdToken({
@@ -405,6 +345,226 @@ const checkBanMiddleware = (req, res, next) => {
 
 // Apply ban check middleware to all API routes
 app.use("/api", checkBanMiddleware)
+
+// Check if user can join more debates today
+const canJoinMoreDebates = (user) => {
+  // Reset daily count if it's a new day
+  const today = new Date().toISOString().split("T")[0]
+  const lastJoinDate = user.lastDebateJoinDate ? user.lastDebateJoinDate.split("T")[0] : null
+
+  if (lastJoinDate !== today) {
+    user.debatesJoinedToday = 0
+  }
+
+  // Check subscription limits
+  let dailyLimit = 8 // Default for free users
+
+  if (user.subscription === "pro") {
+    dailyLimit = 20
+  } else if (user.subscription === "elite") {
+    dailyLimit = 50
+  } else if (user.subscription === "institutional") {
+    dailyLimit = 100
+  }
+
+  return user.debatesJoinedToday < dailyLimit
+}
+
+// Matchmaking helper function
+function handleMatchmaking(user, email, council, topic, ip, res) {
+  // Add user to matchmaking queue
+  const matchmakingData = readMatchmaking()
+  const data = readData() // Make sure we have access to the latest data
+
+  // Check if user is already in queue
+  const existingQueueEntry = matchmakingData.queue.find((entry) => entry.userId === user.id || entry.email === email)
+  if (existingQueueEntry) {
+    return res.status(400).json({ error: "You are already in the matchmaking queue" })
+  }
+
+  // Add to queue
+  const queueEntry = {
+    userId: user.id,
+    email: user.email,
+    name: user.name || email.split("@")[0],
+    username: user.username || user.name || email.split("@")[0],
+    avatar: user.avatar || "/placeholder.svg",
+    council,
+    topic: topic || null,
+    joinedAt: new Date().toISOString(),
+    lastMatchAttempt: null,
+    previousMatches: user.previousMatches ? user.previousMatches.map((match) => match.userId) : [],
+  }
+
+  matchmakingData.queue.push(queueEntry)
+  writeMatchmaking(matchmakingData)
+
+  // Try to find a match
+  const match = findMatch(queueEntry, matchmakingData.queue)
+
+  if (match) {
+    // Create a new debate for the matched users
+    const debateId = crypto.randomUUID()
+    const newDebate = {
+      id: debateId,
+      title: match.topic || topic || `${match.council} Debate`,
+      description: `Matched debate on ${match.council}`,
+      council: match.council,
+      topic: match.topic || topic || "Matched Debate",
+      status: "active",
+      participants: [
+        {
+          id: user.id,
+          email: user.email,
+          name: user.name || email.split("@")[0],
+          username: user.username || user.name || email.split("@")[0],
+          avatar: user.avatar || "/placeholder.svg",
+          joinedAt: new Date().toISOString(),
+        },
+        {
+          id: match.userId,
+          email: match.email,
+          name: match.name,
+          username: match.username,
+          avatar: match.avatar,
+          joinedAt: new Date().toISOString(),
+        },
+      ],
+      isMatchmade: true,
+      createdAt: new Date().toISOString(),
+      startTime: new Date().toISOString(),
+      timerStarted: true, // Start the timer immediately with both participants
+      timerStartTime: new Date().toISOString(),
+      endTime: null,
+    }
+
+    // Update debates file
+    const debatesData = readDebates()
+    debatesData.debates.push(newDebate)
+    writeDebates(debatesData)
+
+    // Update user stats for both users
+    try {
+      // Get fresh user data
+      const userData = readData()
+      const currentUser = userData.users.find((u) => u.id === user.id || u.email === user.email)
+
+      if (!currentUser) {
+        console.error(`User not found for stats update: ${user.email}`)
+      } else {
+        currentUser.debatesJoined = (currentUser.debatesJoined || 0) + 1
+        currentUser.debatesJoinedToday = (currentUser.debatesJoinedToday || 0) + 1
+        currentUser.lastDebateJoinDate = new Date().toISOString()
+
+        // Track previous matches
+        if (!currentUser.previousMatches) {
+          currentUser.previousMatches = []
+        }
+        currentUser.previousMatches.push({
+          userId: match.userId,
+          timestamp: new Date().toISOString(),
+        })
+      }
+
+      const matchedUser = userData.users.find((u) => u.id === match.userId || u.email === match.email)
+      if (!matchedUser) {
+        console.error(`Matched user not found for stats update: ${match.email}`)
+      } else {
+        matchedUser.debatesJoined = (matchedUser.debatesJoined || 0) + 1
+        matchedUser.debatesJoinedToday = (matchedUser.debatesJoinedToday || 0) + 1
+        matchedUser.lastDebateJoinDate = new Date().toISOString()
+
+        // Track previous matches
+        if (!matchedUser.previousMatches) {
+          matchedUser.previousMatches = []
+        }
+        matchedUser.previousMatches.push({
+          userId: user.id,
+          timestamp: new Date().toISOString(),
+        })
+      }
+
+      writeData(userData)
+    } catch (error) {
+      console.error("Error updating user stats:", error)
+      // Continue without failing the matchmaking process
+    }
+
+    // Remove both users from queue
+    matchmakingData.queue = matchmakingData.queue.filter(
+      (entry) => entry.userId !== user.id && entry.userId !== match.userId,
+    )
+
+    // Add to matches
+    matchmakingData.matches.push({
+      debateId,
+      users: [user.id, match.userId],
+      council: match.council,
+      topic: match.topic || topic,
+      matchedAt: new Date().toISOString(),
+    })
+
+    writeMatchmaking(matchmakingData)
+
+    // Trigger Pusher events
+    pusher.trigger(`user-${user.id}`, "match-found", { debate: newDebate })
+    pusher.trigger(`user-${match.userId}`, "match-found", { debate: newDebate })
+    pusher.trigger("debates", "debate-created", { debate: newDebate })
+
+    return res.json({
+      success: true,
+      matched: true,
+      debate: newDebate,
+    })
+  } else {
+    // No match found, user is in queue
+    return res.json({
+      success: true,
+      matched: false,
+      message: "You've been added to the matchmaking queue. We'll notify you when a match is found.",
+    })
+  }
+}
+
+// Helper function to find a match
+function findMatch(user, queue) {
+  // Filter out the current user
+  const potentialMatches = queue.filter((entry) => {
+    // Don't match with self
+    if (entry.userId === user.userId) return false
+
+    // Must be same council
+    if (entry.council !== user.council) return false
+
+    // Check if users have been matched before (avoid matching with same users)
+    if (user.previousMatches && user.previousMatches.some((match) => match.userId === entry.userId)) {
+      return false
+    }
+
+    // If both users specified a topic, they should match on topic
+    if (user.topic && entry.topic && user.topic !== entry.topic) {
+      return false
+    }
+
+    return true
+  })
+
+  if (potentialMatches.length === 0) {
+    return null
+  }
+
+  // If user specified a topic, try to match with someone who wants the same topic
+  if (user.topic) {
+    const topicMatch = potentialMatches.find((entry) => entry.topic === user.topic)
+    if (topicMatch) {
+      return topicMatch
+    }
+  }
+
+  // Otherwise, match with the user who has been waiting the longest
+  potentialMatches.sort((a, b) => new Date(a.joinedAt) - new Date(b.joinedAt))
+  return potentialMatches[0]
+}
 
 // Google OAuth login endpoint
 app.get("/api/auth/google", (req, res) => {
@@ -701,6 +861,7 @@ app.post("/api/auth/verify", (req, res) => {
 
     res.json({
       valid: true,
+      id: user.id,
       username: user.username,
       subscription: user.subscription,
       avatar: user.avatar,
@@ -818,32 +979,86 @@ app.post("/api/user/update", (req, res) => {
   const data = readData()
   const user = data.users.find((u) => u.email === email)
 
-  if (user) {
-    user.username = username
-    user.updatedAt = new Date().toISOString()
-
-    // Update IP if needed
-    if (user.lastIp !== ip) {
-      user.lastIp = ip
-      if (!user.ipHistory) {
-        user.ipHistory = []
-      }
-      user.ipHistory.push({ ip, timestamp: new Date().toISOString() })
-    }
-
-    writeData(data)
-    console.log("User updated successfully:", email)
-
-    res.json({
-      success: true,
-      username: user.username,
-      subscription: user.subscription,
-      isAdmin: ADMIN_EMAILS.includes(email),
-    })
-  } else {
-    console.error("User not found:", email)
-    res.status(404).json({ error: "User not found" })
+  if (!user) {
+    return res.status(404).json({ error: "User not found" })
   }
+
+  // Update username
+  user.username = username
+
+  // Update IP if needed
+  if (user.lastIp !== ip) {
+    user.lastIp = ip
+    if (!user.ipHistory) {
+      user.ipHistory = []
+    }
+    user.ipHistory.push({ ip, timestamp: new Date().toISOString() })
+  }
+
+  writeData(data)
+  console.log("User updated successfully:", email)
+
+  res.json({
+    success: true,
+    username: user.username,
+    subscription: user.subscription,
+    isAdmin: ADMIN_EMAILS.includes(email),
+  })
+})
+
+// User profile endpoint
+app.get("/api/user/profile", (req, res) => {
+  const { email } = req.query
+  const ip = req.clientIp
+
+  if (!email) {
+    return res.status(400).json({ error: "Email is required" })
+  }
+
+  // Check if user is banned
+  const ban = isUserBanned(email, ip)
+  if (ban) {
+    return res.status(403).json({
+      error: "Account banned",
+      reason: ban.reason,
+      expiresAt: ban.expiresAt,
+      permanent: ban.permanent,
+    })
+  }
+
+  const data = readData()
+  const user = data.users.find((u) => u.email === email)
+
+  if (!user) {
+    return res.status(404).json({ error: "User not found" })
+  }
+
+  // Update IP if needed
+  if (user.lastIp !== ip) {
+    user.lastIp = ip
+    if (!user.ipHistory) {
+      user.ipHistory = []
+    }
+    user.ipHistory.push({ ip, timestamp: new Date().toISOString() })
+    writeData(data)
+  }
+
+  // Return user profile data
+  res.json({
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    username: user.username,
+    avatar: user.avatar,
+    subscription: user.subscription,
+    subscription_expiry: user.subscription_expiry,
+    createdAt: user.createdAt,
+    lastLogin: user.lastLogin,
+    debatesJoined: user.debatesJoined || 0,
+    debatesCreated: user.debatesCreated || 0,
+    debatesJoinedToday: user.debatesJoinedToday || 0,
+    isAdmin: ADMIN_EMAILS.includes(email),
+  })
 })
 
 // Debate management endpoints
@@ -873,29 +1088,99 @@ app.get("/api/debates/:id", (req, res) => {
   res.json({ debate })
 })
 
-// Check if user can join more debates today
-const canJoinMoreDebates = (user) => {
-  // Reset daily count if it's a new day
-  const today = new Date().toISOString().split("T")[0]
-  const lastJoinDate = user.lastDebateJoinDate ? user.lastDebateJoinDate.split("T")[0] : null
+// Create a new debate
+app.post("/api/debates", (req, res) => {
+  const { title, description, council, topic, email } = req.body
+  const ip = req.clientIp
 
-  if (lastJoinDate !== today) {
-    user.debatesJoinedToday = 0
+  if (!title || !description || !council || !email) {
+    return res.status(400).json({ error: "Title, description, council, and email are required" })
   }
 
-  // Check subscription limits
-  let dailyLimit = 8 // Default for free users
-
-  if (user.subscription === "pro") {
-    dailyLimit = 20
-  } else if (user.subscription === "elite") {
-    dailyLimit = 50
-  } else if (user.subscription === "institutional") {
-    dailyLimit = 100
+  // Check if council is allowed
+  if (!debateHandler.ALLOWED_COUNCILS.includes(council)) {
+    return res.status(400).json({ error: "Invalid council. Only UN councils are allowed." })
   }
 
-  return user.debatesJoinedToday < dailyLimit
-}
+  // Filter curse words
+  const filteredTitle = filterCurseWords(title)
+  const filteredDescription = filterCurseWords(description)
+  const filteredTopic = filterCurseWords(topic)
+
+  // Check if user is banned
+  const ban = isUserBanned(email, ip)
+  if (ban) {
+    return res.status(403).json({
+      error: "Account banned",
+      reason: ban.reason,
+      expiresAt: ban.expiresAt,
+      permanent: ban.permanent,
+    })
+  }
+
+  const data = readData()
+  const user = data.users.find((u) => u.email === email)
+
+  if (!user) {
+    return res.status(404).json({ error: "User not found" })
+  }
+
+  // Update IP if needed
+  if (user.lastIp !== ip) {
+    user.lastIp = ip
+    if (!user.ipHistory) {
+      user.ipHistory = []
+    }
+    user.ipHistory.push({ ip, timestamp: new Date().toISOString() })
+  }
+
+  // Create new debate
+  const debateId = crypto.randomUUID()
+  const newDebate = {
+    id: debateId,
+    title: filteredTitle,
+    description: filteredDescription,
+    council,
+    topic: filteredTopic || "General",
+    status: "active",
+    participants: [
+      {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        username: user.username,
+        avatar: user.avatar,
+        joinedAt: new Date().toISOString(),
+        isCreator: true,
+      },
+    ],
+    createdBy: user.id,
+    createdAt: new Date().toISOString(),
+    startTime: new Date().toISOString(),
+    timerStarted: false, // Timer will start when second participant joins
+    timerStartTime: null,
+    endTime: null,
+  }
+
+  // Update debates file
+  const debatesData = readDebates()
+  debatesData.debates.push(newDebate)
+  writeDebates(debatesData)
+
+  // Update user stats
+  user.debatesCreated = (user.debatesCreated || 0) + 1
+  user.debatesJoined += 1
+  user.debatesJoinedToday = (user.debatesJoinedToday || 0) + 1
+  user.lastDebateJoinDate = new Date().toISOString()
+  writeData(data)
+
+  // Trigger Pusher event for real-time updates
+  pusher.trigger("debates", "debate-created", {
+    debate: newDebate,
+  })
+
+  res.json({ success: true, debate: newDebate })
+})
 
 // Join a debate
 app.post("/api/debates/:id/join", (req, res) => {
@@ -983,6 +1268,12 @@ app.post("/api/debates/:id/join", (req, res) => {
     joinedAt: new Date().toISOString(),
   })
 
+  // Start timer if this is the second participant
+  if (debate.participants.length === 2 && !debate.timerStarted) {
+    debate.timerStarted = true
+    debate.timerStartTime = new Date().toISOString()
+  }
+
   // Update user's debate stats
   user.debatesJoined = (user.debatesJoined || 0) + 1
   user.debatesJoinedToday = (user.debatesJoinedToday || 0) + 1
@@ -1002,6 +1293,14 @@ app.post("/api/debates/:id/join", (req, res) => {
     },
   })
 
+  // Also trigger timer started event if this is the second participant
+  if (debate.participants.length === 2) {
+    pusher.trigger(`debate-${id}`, "timer-started", {
+      timerStarted: true,
+      timerStartTime: debate.timerStartTime,
+    })
+  }
+
   res.json({
     success: true,
     debate,
@@ -1011,19 +1310,15 @@ app.post("/api/debates/:id/join", (req, res) => {
   })
 })
 
-// Create a new debate
-app.post("/api/debates", (req, res) => {
-  const { title, description, council, topic, email } = req.body
+// Leave a debate
+app.post("/api/debates/:id/leave", (req, res) => {
+  const { id } = req.params
+  const { email, saveToProfile } = req.body
   const ip = req.clientIp
 
-  if (!title || !description || !council || !email) {
-    return res.status(400).json({ error: "Title, description, council, and email are required" })
+  if (!email) {
+    return res.status(400).json({ error: "Email is required" })
   }
-
-  // Filter curse words
-  const filteredTitle = filterCurseWords(title)
-  const filteredDescription = filterCurseWords(description)
-  const filteredTopic = filterCurseWords(topic)
 
   // Check if user is banned
   const ban = isUserBanned(email, ip)
@@ -1050,52 +1345,57 @@ app.post("/api/debates", (req, res) => {
       user.ipHistory = []
     }
     user.ipHistory.push({ ip, timestamp: new Date().toISOString() })
+    writeData(data)
   }
 
-  // Create new debate
-  const debateId = crypto.randomUUID()
-  const newDebate = {
-    id: debateId,
-    title: filteredTitle,
-    description: filteredDescription,
-    council,
-    topic: filteredTopic || "General",
-    status: "active",
-    participants: [
-      {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        username: user.username,
-        avatar: user.avatar,
-        joinedAt: new Date().toISOString(),
-        isCreator: true,
-      },
-    ],
-    createdBy: user.id,
-    createdAt: new Date().toISOString(),
-    startTime: new Date().toISOString(),
-    endTime: null,
+  const debatesData = readDebates()
+  const debate = debatesData.debates.find((d) => d.id === id)
+
+  if (!debate) {
+    return res.status(404).json({ error: "Debate not found" })
+  }
+
+  // Check if user is a participant
+  if (!debate.participants.some((p) => p.email === email)) {
+    return res.status(403).json({ error: "You are not a participant in this debate" })
+  }
+
+  // Remove user from participants
+  debate.participants = debate.participants.filter((p) => p.email !== email)
+
+  // If no participants left, mark debate as completed
+  if (debate.participants.length === 0) {
+    debate.status = "completed"
+    debate.endTime = new Date().toISOString()
   }
 
   // Update debates file
-  const debatesData = readDebates()
-  debatesData.debates.push(newDebate)
   writeDebates(debatesData)
 
-  // Update user stats
-  user.debatesCreated = (user.debatesCreated || 0) + 1
-  user.debatesJoined += 1
-  user.debatesJoinedToday = (user.debatesJoinedToday || 0) + 1
-  user.lastDebateJoinDate = new Date().toISOString()
-  writeData(data)
+  // Save to profile if requested
+  if (saveToProfile) {
+    if (!user.debateHistory) {
+      user.debateHistory = []
+    }
+
+    user.debateHistory.push({
+      debateId: id,
+      title: debate.title,
+      council: debate.council,
+      topic: debate.topic,
+      joinedAt: debate.participants.find((p) => p.email === email)?.joinedAt || debate.startTime,
+      leftAt: new Date().toISOString(),
+    })
+
+    writeData(data)
+  }
 
   // Trigger Pusher event for real-time updates
-  pusher.trigger("debates", "debate-created", {
-    debate: newDebate,
+  pusher.trigger(`debate-${id}`, "user-left", {
+    email,
   })
 
-  res.json({ success: true, debate: newDebate })
+  res.json({ success: true })
 })
 
 // Chat message endpoints
@@ -1151,6 +1451,11 @@ app.post("/api/debates/:id/messages", (req, res) => {
     return res.status(403).json({ error: "You must join the debate to send messages" })
   }
 
+  // Check if there are at least 2 participants
+  if (debate.participants.length < 2) {
+    return res.status(403).json({ error: "You need at least 2 participants to start messaging" })
+  }
+
   // Create new message
   const messageId = crypto.randomUUID()
   const newMessage = {
@@ -1188,96 +1493,18 @@ app.get("/api/debates/:id/messages", (req, res) => {
   res.json({ messages: debateMessages })
 })
 
-// AI message generation endpoint
-app.post("/api/debates/:id/ai-message", (req, res) => {
+// Get debate timer
+app.get("/api/debates/:id/timer", (req, res) => {
   const { id } = req.params
-  const { prompt, email } = req.body
-  const ip = req.clientIp
 
-  if (!prompt || !email) {
-    return res.status(400).json({ error: "Prompt and email are required" })
+  // Get timer status
+  const result = debateHandler.getDebateTimer(id)
+
+  if (result.success) {
+    res.json(result)
+  } else {
+    res.status(404).json({ error: result.error })
   }
-
-  // Check if user is banned
-  const ban = isUserBanned(email, ip)
-  if (ban) {
-    return res.status(403).json({
-      error: "Account banned",
-      reason: ban.reason,
-      expiresAt: ban.expiresAt,
-      permanent: ban.permanent,
-    })
-  }
-
-  const data = readData()
-  const user = data.users.find((u) => u.email === email)
-
-  if (!user) {
-    return res.status(404).json({ error: "User not found" })
-  }
-
-  // Update IP if needed
-  if (user.lastIp !== ip) {
-    user.lastIp = ip
-    if (!user.ipHistory) {
-      user.ipHistory = []
-    }
-    user.ipHistory.push({ ip, timestamp: new Date().toISOString() })
-    writeData(data)
-  }
-
-  // Check if user has access to AI features
-  if (user.subscription === "free") {
-    return res
-      .status(403)
-      .json({ error: "AI features are only available to Pro, Elite, and Institutional subscribers" })
-  }
-
-  const debatesData = readDebates()
-  const debate = debatesData.debates.find((d) => d.id === id)
-
-  if (!debate) {
-    return res.status(404).json({ error: "Debate not found" })
-  }
-
-  // Generate AI response (mock implementation)
-  const aiResponses = [
-    "I believe we should consider a multilateral approach to this issue, focusing on cooperation between developed and developing nations.",
-    "The evidence suggests that economic incentives would be more effective than regulatory measures in this context.",
-    "We must prioritize sustainable development while ensuring equitable access to resources for all nations.",
-    "Historical precedents indicate that a phased implementation would yield better compliance rates.",
-    "My delegation proposes a three-step plan: assessment, capacity building, and coordinated implementation.",
-    "The scientific consensus clearly supports immediate action on this matter.",
-    "We should establish a working group to develop comprehensive guidelines that address the concerns of all stakeholders.",
-    "This issue requires balancing sovereignty concerns with our collective responsibility to the international community.",
-  ]
-
-  const aiResponse = aiResponses[Math.floor(Math.random() * aiResponses.length)]
-
-  // Create AI message
-  const messageId = crypto.randomUUID()
-  const aiMessage = {
-    id: messageId,
-    debateId: id,
-    userId: "ai-assistant",
-    email: "ai@diplomaq.lol",
-    name: "AI Diplomat",
-    username: "ai_diplomat",
-    avatar: "/images/ai-avatar.png",
-    content: aiResponse,
-    isAI: true,
-    timestamp: new Date().toISOString(),
-  }
-
-  // Add message to messages file
-  const messagesData = readMessages()
-  messagesData.messages.push(aiMessage)
-  writeMessages(messagesData)
-
-  // Trigger Pusher event for real-time updates
-  pusher.trigger(`debate-${id}`, "new-message", aiMessage)
-
-  res.json({ success: true, message: aiMessage })
 })
 
 // Matchmaking endpoints
@@ -1348,912 +1575,137 @@ app.post("/api/matchmaking/join", (req, res) => {
   return handleMatchmaking(user, email, council, topic, ip, res)
 })
 
-// Add this helper function for matchmaking
-function handleMatchmaking(user, email, council, topic, ip, res) {
-  // Add user to matchmaking queue
-  const matchmakingData = readMatchmaking()
-  const data = readData() // Make sure we have access to the latest data
-
-  // Check if user is already in queue
-  const existingQueueEntry = matchmakingData.queue.find((entry) => entry.userId === user.id || entry.email === email)
-  if (existingQueueEntry) {
-    return res.status(400).json({ error: "You are already in the matchmaking queue" })
-  }
-
-  // Add to queue
-  const queueEntry = {
-    userId: user.id,
-    email: user.email,
-    name: user.name || email.split("@")[0],
-    username: user.username || user.name || email.split("@")[0],
-    avatar: user.avatar || "/placeholder.svg",
-    council,
-    topic: topic || null,
-    joinedAt: new Date().toISOString(),
-    lastMatchAttempt: null,
-    previousMatches: user.previousMatches ? user.previousMatches.map((match) => match.userId) : [],
-  }
-
-  matchmakingData.queue.push(queueEntry)
-  writeMatchmaking(matchmakingData)
-
-  // Try to find a match
-  const match = findMatchFixed(queueEntry, matchmakingData.queue)
-
-  if (match) {
-    // Create a new debate for the matched users
-    const debateId = crypto.randomUUID()
-    const newDebate = {
-      id: debateId,
-      title: match.topic || topic || `${match.council} Debate`,
-      description: `Matched debate on ${match.council}`,
-      council: match.council,
-      topic: match.topic || topic || "Matched Debate",
-      status: "active",
-      participants: [
-        {
-          id: user.id,
-          email: user.email,
-          name: user.name || email.split("@")[0],
-          username: user.username || user.name || email.split("@")[0],
-          avatar: user.avatar || "/placeholder.svg",
-          joinedAt: new Date().toISOString(),
-        },
-        {
-          id: match.userId,
-          email: match.email,
-          name: match.name,
-          username: match.username,
-          avatar: match.avatar,
-          joinedAt: new Date().toISOString(),
-        },
-      ],
-      isMatchmade: true,
-      createdAt: new Date().toISOString(),
-      startTime: new Date().toISOString(),
-      endTime: null,
-    }
-
-    // Update debates file
-    const debatesData = readDebates()
-    debatesData.debates.push(newDebate)
-    writeDebates(debatesData)
-
-    // Update user stats for both users
-    try {
-      // Get fresh user data
-      const userData = readData()
-      const currentUser = userData.users.find((u) => u.id === user.id || u.email === user.email)
-
-      if (!currentUser) {
-        console.error(`User not found for stats update: ${user.email}`)
-      } else {
-        currentUser.debatesJoined = (currentUser.debatesJoined || 0) + 1
-        currentUser.debatesJoinedToday = (currentUser.debatesJoinedToday || 0) + 1
-        currentUser.lastDebateJoinDate = new Date().toISOString()
-
-        // Track previous matches
-        if (!currentUser.previousMatches) {
-          currentUser.previousMatches = []
-        }
-        currentUser.previousMatches.push({
-          userId: match.userId,
-          timestamp: new Date().toISOString(),
-        })
-      }
-
-      const matchedUser = userData.users.find((u) => u.id === match.userId || u.email === match.email)
-      if (!matchedUser) {
-        console.error(`Matched user not found for stats update: ${match.email}`)
-      } else {
-        matchedUser.debatesJoined = (matchedUser.debatesJoined || 0) + 1
-        matchedUser.debatesJoinedToday = (matchedUser.debatesJoinedToday || 0) + 1
-        matchedUser.lastDebateJoinDate = new Date().toISOString()
-
-        // Track previous matches
-        if (!matchedUser.previousMatches) {
-          matchedUser.previousMatches = []
-        }
-        matchedUser.previousMatches.push({
-          userId: user.id,
-          timestamp: new Date().toISOString(),
-        })
-      }
-
-      writeData(userData)
-    } catch (error) {
-      console.error("Error updating user stats:", error)
-      // Continue without failing the matchmaking process
-    }
-
-    // Remove both users from queue
-    matchmakingData.queue = matchmakingData.queue.filter(
-      (entry) => entry.userId !== user.id && entry.userId !== match.userId,
-    )
-
-    // Add to matches
-    matchmakingData.matches.push({
-      debateId,
-      users: [user.id, match.userId],
-      council: match.council,
-      topic: match.topic || topic,
-      matchedAt: new Date().toISOString(),
-    })
-
-    writeMatchmaking(matchmakingData)
-
-    // Trigger Pusher events
-    pusher.trigger(`user-${user.id}`, "match-found", { debate: newDebate })
-    pusher.trigger(`user-${match.userId}`, "match-found", { debate: newDebate })
-    pusher.trigger("debates", "debate-created", { debate: newDebate })
-
-    return res.json({
-      success: true,
-      matched: true,
-      debate: newDebate,
-    })
-  } else {
-    // No match found, user is in queue
-    return res.json({
-      success: true,
-      matched: false,
-      message: "You've been added to the matchmaking queue. We'll notify you when a match is found.",
-    })
-  }
-}
-
 app.post("/api/matchmaking/leave", (req, res) => {
   const { email } = req.body
+  const ip = req.clientIp
 
   if (!email) {
     return res.status(400).json({ error: "Email is required" })
   }
 
-  const data = readData()
-  const user = data.users.find((u) => u.email === email)
-
-  if (!user) {
-    return res.status(404).json({ error: "User not found" })
+  // Check if user is banned
+  const ban = isUserBanned(email, ip)
+  if (ban) {
+    return res.status(403).json({
+      error: "Account banned",
+      reason: ban.reason,
+      expiresAt: ban.expiresAt,
+      permanent: ban.permanent,
+    })
   }
 
-  // Remove user from matchmaking queue
   const matchmakingData = readMatchmaking()
-  matchmakingData.queue = matchmakingData.queue.filter((entry) => entry.userId !== user.id)
+
+  // Check if user is in queue
+  const queueEntry = matchmakingData.queue.find((entry) => entry.email === email)
+
+  if (!queueEntry) {
+    return res.status(400).json({ error: "You are not in the matchmaking queue" })
+  }
+
+  // Remove user from queue
+  matchmakingData.queue = matchmakingData.queue.filter((entry) => entry.email !== email)
   writeMatchmaking(matchmakingData)
 
-  res.json({
-    success: true,
-    message: "You've been removed from the matchmaking queue.",
-  })
+  // Trigger Pusher event
+  if (pusher) {
+    pusher.trigger(`user-${queueEntry.userId}`, "queue-left", {
+      timestamp: new Date().toISOString(),
+    })
+  }
+
+  res.json({ success: true })
 })
 
 app.get("/api/matchmaking/status", (req, res) => {
   const { email } = req.query
+  const ip = req.clientIp
 
   if (!email) {
     return res.status(400).json({ error: "Email is required" })
   }
 
-  const data = readData()
-  const user = data.users.find((u) => u.email === email)
-
-  if (!user) {
-    return res.status(404).json({ error: "User not found" })
+  // Check if user is banned
+  const ban = isUserBanned(email, ip)
+  if (ban) {
+    return res.status(403).json({
+      error: "Account banned",
+      reason: ban.reason,
+      expiresAt: ban.expiresAt,
+      permanent: ban.permanent,
+    })
   }
+
+  const matchmakingData = readMatchmaking()
 
   // Check if user is in queue
-  const matchmakingData = readMatchmaking()
-  const queueEntry = matchmakingData.queue.find((entry) => entry.userId === user.id)
+  const queueIndex = matchmakingData.queue.findIndex((entry) => entry.email === email)
 
-  if (queueEntry) {
-    res.json({
-      inQueue: true,
-      queueEntry,
-      queuePosition: matchmakingData.queue.findIndex((entry) => entry.userId === user.id) + 1,
-      queueSize: matchmakingData.queue.length,
-    })
-  } else {
-    res.json({
-      inQueue: false,
-    })
-  }
-})
+  if (queueIndex === -1) {
+    // Check if user has a recent match
+    const data = readData()
+    const user = data.users.find((u) => u.email === email)
 
-// Helper function to find a match
-function findMatch(user, queue) {
-  // Filter out the current user
-  const potentialMatches = queue.filter((entry) => entry.userId !== user.userId && entry.council === user.council)
-
-  if (potentialMatches.length === 0) {
-    return null
-  }
-
-  // If user specified a topic, try to match with someone who wants the same topic
-  if (user.topic) {
-    const topicMatch = potentialMatches.find((entry) => entry.topic === user.topic)
-    if (topicMatch) {
-      return topicMatch
-    }
-  }
-
-  // Otherwise, match with the user who has been waiting the longest
-  potentialMatches.sort((a, b) => new Date(a.joinedAt) - new Date(b.joinedAt))
-  return potentialMatches[0]
-}
-
-// Add a user profile endpoint
-app.get("/api/user/profile", (req, res) => {
-  const { email } = req.query
-  const ip = req.clientIp
-
-  if (!email) {
-    return res.status(400).json({ error: "Email is required" })
-  }
-
-  // Check if user is banned
-  const ban = isUserBanned(email, ip)
-  if (ban) {
-    return res.status(403).json({
-      error: "Account banned",
-      reason: ban.reason,
-      expiresAt: ban.expiresAt,
-      permanent: ban.permanent,
-    })
-  }
-
-  const data = readData()
-  const user = data.users.find((u) => u.email === email)
-
-  if (!user) {
-    return res.status(404).json({ error: "User not found" })
-  }
-
-  // Update IP if needed
-  if (user.lastIp !== ip) {
-    user.lastIp = ip
-    if (!user.ipHistory) {
-      user.ipHistory = []
-    }
-    user.ipHistory.push({ ip, timestamp: new Date().toISOString() })
-    writeData(data)
-  }
-
-  // Check if subscription is expired
-  let isExpired = false
-  if (user.subscription !== "free" && user.subscription_expiry) {
-    isExpired = new Date(user.subscription_expiry) < new Date()
-
-    // Auto-downgrade expired subscriptions
-    if (isExpired && user.subscription !== "free") {
-      user.subscription = "free"
-      user.subscription_expired_at = new Date().toISOString()
-      writeData(data)
-    }
-  }
-
-  // Return user profile data
-  res.json({
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    username: user.username,
-    avatar: user.avatar,
-    subscription: user.subscription,
-    subscription_expiry: user.subscription_expiry,
-    isExpired,
-    lastLogin: user.lastLogin,
-    createdAt: user.createdAt,
-    debatesJoined: user.debatesJoined || 0,
-    debatesCreated: user.debatesCreated || 0,
-    debatesJoinedToday: user.debatesJoinedToday || 0,
-    isAdmin: ADMIN_EMAILS.includes(email),
-  })
-})
-
-// Helper function to calculate expiry date
-function calculateExpiryDate(startDate, days) {
-  const expiryDate = new Date(startDate)
-  expiryDate.setDate(expiryDate.getDate() + days)
-  return expiryDate.toISOString()
-}
-
-// Helper function to log transactions
-function logTransaction(transactionData) {
-  const logFile = path.join(__dirname, "kofi_transactions.json")
-  let transactions = []
-
-  // Read existing transactions if file exists
-  if (fs.existsSync(logFile)) {
-    try {
-      transactions = fs.readJsonSync(logFile)
-    } catch (error) {
-      console.error("Error reading transaction log:", error)
-    }
-  }
-
-  // Add new transaction with timestamp
-  transactions.push({
-    ...transactionData,
-    logged_at: new Date().toISOString(),
-  })
-
-  // Write updated transactions
-  try {
-    fs.writeJsonSync(logFile, transactions)
-  } catch (error) {
-    console.error("Error writing transaction log:", error)
-  }
-}
-
-// Subscription management endpoints
-app.get("/api/subscriptions/status", (req, res) => {
-  const { email } = req.query
-  const ip = req.clientIp
-
-  if (!email) {
-    return res.status(400).json({ error: "Email is required" })
-  }
-
-  // Check if user is banned
-  const ban = isUserBanned(email, ip)
-  if (ban) {
-    return res.status(403).json({
-      error: "Account banned",
-      reason: ban.reason,
-      expiresAt: ban.expiresAt,
-      permanent: ban.permanent,
-    })
-  }
-
-  const data = readData()
-  const user = data.users.find((u) => u.email === email)
-
-  if (!user) {
-    return res.status(404).json({ error: "User not found" })
-  }
-
-  // Update IP if needed
-  if (user.lastIp !== ip) {
-    user.lastIp = ip
-    if (!user.ipHistory) {
-      user.ipHistory = []
-    }
-    user.ipHistory.push({ ip, timestamp: new Date().toISOString() })
-    writeData(data)
-  }
-
-  // Check if subscription is expired
-  let isExpired = false
-  if (user.subscription !== "free" && user.subscription_expiry) {
-    isExpired = new Date(user.subscription_expiry) < new Date()
-  }
-
-  res.json({
-    subscription: user.subscription,
-    expiry: user.subscription_expiry || null,
-    isExpired,
-    lastUpdated: user.subscription_updated || null,
-    isAdmin: ADMIN_EMAILS.includes(email),
-  })
-})
-
-// Function to verify if a user has access to a specific feature
-app.get("/api/access/verify", (req, res) => {
-  const { email, feature } = req.query
-  const ip = req.clientIp
-
-  if (!email || !feature) {
-    return res.status(400).json({ error: "Email and feature are required" })
-  }
-
-  // Check if user is banned
-  const ban = isUserBanned(email, ip)
-  if (ban) {
-    return res.status(403).json({
-      error: "Account banned",
-      reason: ban.reason,
-      expiresAt: ban.expiresAt,
-      permanent: ban.permanent,
-    })
-  }
-
-  const data = readData()
-  const user = data.users.find((u) => u.email === email)
-
-  if (!user) {
-    return res.status(404).json({ error: "User not found" })
-  }
-
-  // Update IP if needed
-  if (user.lastIp !== ip) {
-    user.lastIp = ip
-    if (!user.ipHistory) {
-      user.ipHistory = []
-    }
-    user.ipHistory.push({ ip, timestamp: new Date().toISOString() })
-    writeData(data)
-  }
-
-  // Check if subscription is expired
-  let isExpired = false
-  if (user.subscription !== "free" && user.subscription_expiry) {
-    isExpired = new Date(user.subscription_expiry) < new Date()
-  }
-
-  // If subscription is expired, downgrade to free
-  if (isExpired && user.subscription !== "free") {
-    user.subscription = "free"
-    user.subscription_expired_at = new Date().toISOString()
-    writeData(data)
-  }
-
-  // Define feature access based on subscription level
-  const featureAccess = {
-    "debate-ai": ["pro", "elite", "institutional"],
-    "unlimited-debates": ["pro", "elite", "institutional"],
-    "advanced-analytics": ["elite", "institutional"],
-    "custom-topics": ["elite", "institutional"],
-    "team-management": ["institutional"],
-    "white-label": ["institutional"],
-    "admin-ban": ["admin"], // Special admin-only feature
-  }
-
-  // Check if user's subscription grants access to the requested feature
-  let hasAccess = false
-
-  if (feature === "admin-ban") {
-    hasAccess = ADMIN_EMAILS.includes(email)
-  } else {
-    hasAccess = featureAccess[feature] ? featureAccess[feature].includes(user.subscription) : false
-  }
-
-  res.json({
-    hasAccess,
-    subscription: user.subscription,
-    isExpired,
-    feature,
-    isAdmin: ADMIN_EMAILS.includes(email),
-  })
-})
-
-// Enhanced Ko-fi webhook endpoint
-app.post("/api/kofi/webhook", (req, res) => {
-  try {
-    console.log("Received Ko-fi webhook:", req.body)
-
-    // Extract data from the request
-    const data = req.body.data || req.body
-
-    // Verify Ko-fi verification token
-    const expectedToken = process.env.KOFI_VERIFICATION_TOKEN || "adbb7035-7f57-49ca-b3ee-5844ecb07a53"
-    if (expectedToken && data.verification_token !== expectedToken) {
-      console.error("Invalid verification token received:", data.verification_token)
-      return res.status(401).json({ error: "Invalid verification token" })
+    if (!user) {
+      return res.json({ inQueue: false })
     }
 
-    // Extract Ko-fi data
-    const {
-      message_id,
-      timestamp,
-      type,
-      is_public,
-      from_name,
-      message,
-      amount,
-      url,
-      email,
-      currency,
-      is_subscription_payment,
-      is_first_subscription_payment,
-      kofi_transaction_id,
-      shop_items = [],
-      tier_name,
-    } = data
+    const recentMatches = matchmakingData.matches.filter(
+      (match) => match.users.includes(user.id) && new Date(match.matchedAt) > new Date(Date.now() - 60 * 1000), // Matches in the last minute
+    )
 
-    // Extract shipping information if available
-    const shippingInfo = data.shipping_info || {}
-    const { name, street_address, city, state_or_province, postal_code, country, phone_number } = shippingInfo
+    if (recentMatches.length > 0) {
+      const mostRecentMatch = recentMatches[recentMatches.length - 1]
 
-    // Send email with customer details
-    if (email) {
-      const customerDetails = {
-        email,
-        name: name || from_name,
-        street: street_address || "Not provided",
-        town: city || "Not provided",
-        postcode: postal_code || "Not provided",
-        phone: phone_number || "Not provided",
-        amount: amount || "0.05",
-        currency: currency,
-        timestamp: new Date().toISOString(),
+      // Look up the debate
+      const debatesData = readDebates()
+      const debate = debatesData.debates.find((d) => d.id === mostRecentMatch.debateId)
+
+      if (debate) {
+        return res.json({
+          inQueue: false,
+          matched: true,
+          debate: debate,
+        })
       }
-
-      console.log("Sending customer details email:", customerDetails)
-      // In a real implementation, you would send an email here
-      // sendCustomerDetailsEmail(customerDetails);
     }
 
-    console.log("Ko-fi webhook details:", {
-      type,
-      from_name,
-      email,
-      amount,
-      is_subscription_payment,
-      tier_name,
-      kofi_transaction_id,
-      timestamp,
-    })
-
-    // Handle different types of Ko-fi transactions
-    switch (type) {
-      case "Subscription":
-        // Process subscription payment
-        if (email) {
-          const data = readData()
-          const user = data.users.find((u) => u.email === email)
-
-          if (user) {
-            // Map tier_name directly to subscription level
-            let subscriptionTier = "free"
-
-            if (tier_name) {
-              if (tier_name.toLowerCase().includes("pro")) {
-                subscriptionTier = "pro"
-              } else if (tier_name.toLowerCase().includes("elite")) {
-                subscriptionTier = "elite"
-              } else if (tier_name.toLowerCase().includes("institutional")) {
-                subscriptionTier = "institutional"
-              }
-            }
-
-            // Update user subscription
-            user.subscription = subscriptionTier
-            user.subscription_updated = new Date().toISOString()
-            user.kofi_transaction_id = kofi_transaction_id
-            user.subscription_expiry = calculateExpiryDate(new Date(), 30) // 30 days subscription
-            user.payment_history = user.payment_history || []
-
-            user.payment_history.push({
-              type: "subscription",
-              tier: subscriptionTier,
-              amount,
-              currency,
-              transaction_id: kofi_transaction_id,
-              timestamp: new Date().toISOString(),
-            })
-
-            writeData(data)
-
-            console.log(`Updated subscription for ${email} to ${subscriptionTier}`)
-
-            // Log transaction to a separate file for auditing
-            logTransaction({
-              email,
-              type,
-              tier_name,
-              amount,
-              currency,
-              kofi_transaction_id,
-              timestamp,
-              is_first_subscription_payment,
-            })
-
-            // Send welcome email for new subscribers
-            if (is_first_subscription_payment) {
-              console.log(`Sending welcome email to new ${subscriptionTier} subscriber: ${email}`)
-              // In a real implementation, you would send an email here
-            }
-          } else {
-            console.log(`User with email ${email} not found, creating new user record`)
-
-            // Create a new user if they don't exist yet
-            const newUser = {
-              id: crypto.randomUUID(),
-              email,
-              name: from_name || email.split("@")[0],
-              createdAt: new Date().toISOString(),
-              lastLogin: new Date().toISOString(),
-              subscription: tier_name.toLowerCase().includes("pro")
-                ? "pro"
-                : tier_name.toLowerCase().includes("elite")
-                  ? "elite"
-                  : tier_name.toLowerCase().includes("institutional")
-                    ? "institutional"
-                    : "free",
-              subscription_updated: new Date().toISOString(),
-              kofi_transaction_id: kofi_transaction_id,
-              subscription_expiry: calculateExpiryDate(new Date(), 30),
-              payment_history: [
-                {
-                  type: "subscription",
-                  tier: tier_name.toLowerCase().includes("pro")
-                    ? "pro"
-                    : tier_name.toLowerCase().includes("elite")
-                      ? "elite"
-                      : tier_name.toLowerCase().includes("institutional")
-                        ? "institutional"
-                        : "free",
-                  amount,
-                  currency,
-                  transaction_id: kofi_transaction_id,
-                  timestamp: new Date().toISOString(),
-                },
-              ],
-            }
-
-            data.users.push(newUser)
-            writeData(data)
-
-            console.log(`Created new user with email ${email} and subscription ${newUser.subscription}`)
-
-            // Log transaction
-            logTransaction({
-              email,
-              type,
-              tier_name,
-              amount,
-              currency,
-              kofi_transaction_id,
-              timestamp,
-              is_first_subscription_payment,
-              new_user: true,
-            })
-
-            // Send welcome email
-            console.log(`Sending welcome email to new user: ${email}`)
-            // In a real implementation, you would send an email here
-          }
-        } else {
-          console.error("No email provided in Ko-fi webhook data")
-        }
-        break
-
-      case "Donation":
-        // Handle one-time donations
-        if (email) {
-          const data = readData()
-          const user = data.users.find((u) => u.email === email)
-
-          if (user) {
-            // Record the donation
-            user.last_donation = {
-              amount,
-              currency,
-              timestamp: new Date().toISOString(),
-              kofi_transaction_id,
-            }
-
-            // If donation amount is sufficient, upgrade subscription
-            const amountNum = Number.parseFloat(amount)
-            let subscriptionTier = user.subscription
-
-            if (amountNum >= 89) {
-              subscriptionTier = "institutional"
-            } else if (amountNum >= 11.99) {
-              subscriptionTier = "elite"
-            } else if (amountNum >= 4.99) {
-              subscriptionTier = "pro"
-            }
-
-            // Only upgrade if the new tier is higher than current
-            const tierRank = { free: 0, pro: 1, elite: 2, institutional: 3 }
-            if (tierRank[subscriptionTier] > tierRank[user.subscription]) {
-              user.subscription = subscriptionTier
-              user.subscription_updated = new Date().toISOString()
-              user.subscription_expiry = calculateExpiryDate(new Date(), 30)
-              console.log(`Upgraded ${email} to ${subscriptionTier} based on donation amount`)
-            }
-
-            writeData(data)
-
-            // Log transaction
-            logTransaction({
-              email,
-              type: "Donation",
-              amount,
-              currency,
-              kofi_transaction_id,
-              timestamp,
-              subscription_upgraded: tierRank[subscriptionTier] > tierRank[user.subscription],
-            })
-          } else {
-            console.log(`User with email ${email} not found for donation, creating new user`)
-
-            // Create a new user
-            const newUser = {
-              id: crypto.randomUUID(),
-              email,
-              name: from_name || email.split("@")[0],
-              createdAt: new Date().toISOString(),
-              lastLogin: new Date().toISOString(),
-              subscription: "free",
-              last_donation: {
-                amount,
-                currency,
-                timestamp: new Date().toISOString(),
-                kofi_transaction_id,
-              },
-            }
-
-            const data = readData()
-            data.users.push(newUser)
-            writeData(data)
-
-            console.log(`Created new user with email ${email}`)
-          }
-        }
-        break
-
-      case "Shop Order":
-        // Handle shop orders
-        console.log("Shop order received:", shop_items)
-
-        if (email) {
-          const data = readData()
-          const user = data.users.find((u) => u.email === email)
-
-          if (user) {
-            user.shop_orders = user.shop_orders || []
-            user.shop_orders.push({
-              items: shop_items,
-              amount,
-              currency,
-              transaction_id: kofi_transaction_id,
-              timestamp: new Date().toISOString(),
-            })
-
-            writeData(data)
-            console.log(`Recorded shop order for ${email}`)
-          } else {
-            console.log(`User with email ${email} not found for shop order, creating new user`)
-
-            // Create a new user
-            const newUser = {
-              id: crypto.randomUUID(),
-              email,
-              name: from_name || email.split("@")[0],
-              createdAt: new Date().toISOString(),
-              lastLogin: new Date().toISOString(),
-              subscription: "free",
-              shop_orders: [
-                {
-                  items: shop_items,
-                  amount,
-                  currency,
-                  transaction_id: kofi_transaction_id,
-                  timestamp: new Date().toISOString(),
-                },
-              ],
-            }
-
-            const data = readData()
-            data.users.push(newUser)
-            writeData(data)
-
-            console.log(`Created new user with email ${email} for shop order`)
-          }
-        }
-        break
-
-      default:
-        console.log(`Unhandled Ko-fi event type: ${type}`)
-    }
-
-    res.json({ success: true, message: "Webhook processed successfully" })
-  } catch (error) {
-    console.error("Error processing Ko-fi webhook:", error)
-    res.status(500).json({ error: "Internal server error", details: error.message })
+    return res.json({ inQueue: false })
   }
-})
 
-// Serve debates.html
-app.get("/debates.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "debates.html"))
-})
-
-// Default route handler for the main page
-app.get("/", (req, res) => {
-  // Check if there are authentication parameters
-  const { token, email } = req.query
-  if (token && email) {
-    // Redirect to index.html with auth parameters
-    res.redirect(`/index.html?token=${token}&email=${encodeURIComponent(email)}`)
-  } else {
-    res.sendFile(path.join(__dirname, "index.html"))
-  }
-})
-
-// Health check endpoint
-app.get("/health", (req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() })
-})
-
-// Start the server
-const server = app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`)
-  console.log(`Visit http://localhost:${PORT} to view the application`)
-  console.log(`Google OAuth configured with Client ID: ${GOOGLE_CLIENT_ID.substring(0, 10)}...`)
-})
-
-// Handle graceful shutdown
-process.on("SIGTERM", () => {
-  console.log("SIGTERM signal received: closing HTTP server")
-  server.close(() => {
-    console.log("HTTP server closed")
+  return res.json({
+    inQueue: true,
+    queueEntry: matchmakingData.queue[queueIndex],
+    queuePosition: queueIndex + 1,
+    queueSize: matchmakingData.queue.length,
   })
 })
 
-// Update the topics object to only include UN councils
-const topics = {
-  UNSC: [
-    "Cybersecurity and International Peace",
-    "Nuclear Non-Proliferation",
-    "Terrorism and International Security",
-    "Protection of Civilians in Armed Conflict",
-    "Climate Change as a Security Threat",
-    "Peacekeeping Operations Reform",
-    "Women, Peace, and Security",
-    "Maritime Security and Piracy",
-    "Sanctions Regimes Effectiveness",
-    "Conflict Prevention in Fragile States",
-    "Cross-Border Humanitarian Access",
-    "Small Arms and Light Weapons Proliferation",
-    "Children in Armed Conflict",
-    "Post-Conflict Peacebuilding",
-    "Regional Organizations and Collective Security",
-    "Protection of Critical Infrastructure",
-    "Transnational Organized Crime",
-    "Refugee Crises as Security Threats",
-    "Disarmament and Arms Control",
-    "Emerging Technologies in Warfare",
-  ],
-  UNGA: [
-    "Sustainable Development Goals Implementation",
-    "Global Health Security",
-    "Digital Divide and Technology Transfer",
-    "Outer Space Governance",
-    "Global Tax Reform",
-    "Artificial Intelligence Governance",
-    "Plastic Pollution in Oceans",
-    "Global Education Crisis",
-    "Aging Populations and Social Security",
-    "Indigenous Peoples' Rights",
-    "Global Food Security",
-    "Antimicrobial Resistance",
-    "International Migration Governance",
-    "Cultural Heritage Protection",
-    "Disaster Risk Reduction",
-    "Youth Empowerment in Decision-Making",
-    "Global Housing Crisis",
-    "Water Scarcity and Sanitation",
-    "Renewable Energy Transition",
-    "Global Mental Health Crisis",
-  ],
-  UNHRC: [
-    "Digital Rights and Privacy",
-    "Business and Human Rights",
-    "Rights of Persons with Disabilities",
-    "Freedom of Religion or Belief",
-    "Human Rights Defenders Protection",
-    "Death Penalty Moratorium",
-    "Human Rights and Climate Change",
-    "Racial Discrimination and Xenophobia",
-    "Freedom of Assembly and Association",
-    "Human Rights in Counterterrorism",
-    "LGBTQ+ Rights Globally",
-    "Right to Clean Water",
-    "Human Rights Education",
-    "Rights of Older Persons",
-    "Human Rights in the Digital Age",
-    "Arbitrary Detention",
-    "Human Trafficking and Modern Slavery",
-    "Right to Nationality and Statelessness",
-    "Freedom of Expression Online",
-    "Economic and Social Rights Implementation",
-  ],
-}
+// Quick match endpoints
+app.post("/api/matchmaking/quick-match", (req, res) => {
+  const { email, council, topic } = req.body
+  const ip = req.clientIp
 
-// Add a function to filter curse words
+  if (!email || !council) {
+    return res.status(400).json({ error: "Email and council are required" })
+  }
+
+  // Check if user is banned
+  const ban = isUserBanned(email, ip)
+  if (ban) {
+    return res.status(403).json({
+      error: "Account banned",
+      reason: ban.reason,
+      expiresAt: ban.expiresAt,
+      permanent: ban.permanent,
+    })
+  }
+
+  // Call matchmaking function that handles creating AI debates
+  return matchmaking.requestQuickMatch(email, council, topic, req.clientIp, res)
+})
+
+// Function to filter curse words in text
 function filterCurseWords(text) {
   if (!text) return text
 
@@ -2288,674 +1740,31 @@ function filterCurseWords(text) {
   return filteredText
 }
 
-// Add these endpoints to the server.js file
+// Health check endpoint
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString() })
+})
 
-// Vote on a debate
-app.post("/api/debates/:id/vote", (req, res) => {
-  const { id } = req.params
-  const { email, votedFor } = req.body
-  const ip = req.clientIp
+// Start the server
+const server = app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`)
+  console.log(`Visit http://localhost:${PORT} to view the application`)
+  console.log(`Google OAuth configured with Client ID: ${GOOGLE_CLIENT_ID.substring(0, 10)}...`)
 
-  if (!email || !votedFor) {
-    return res.status(400).json({ error: "Email and votedFor are required" })
+  // Initialize matchmaking with Pusher
+  if (typeof matchmaking.init === "function") {
+    matchmaking.init(pusher)
+    console.log("Matchmaking module initialized with Pusher")
   }
 
-  // Check if user is banned
-  const ban = isUserBanned(email, ip)
-  if (ban) {
-    return res.status(403).json({
-      error: "Account banned",
-      reason: ban.reason,
-      expiresAt: ban.expiresAt,
-      permanent: ban.permanent,
-    })
-  }
+  // Periodically check debate expiry
+  setInterval(debateHandler.checkDebateExpiry, 60 * 1000)
+})
 
-  const data = readData()
-  const user = data.users.find((u) => u.email === email)
-
-  if (!user) {
-    return res.status(404).json({ error: "User not found" })
-  }
-
-  const debatesData = readDebates()
-  const debate = debatesData.debates.find((d) => d.id === id)
-
-  if (!debate) {
-    return res.status(404).json({ error: "Debate not found" })
-  }
-
-  // Check if user is a participant
-  if (!debate.participants.some((p) => p.email === email)) {
-    return res.status(403).json({ error: "You must join the debate to vote" })
-  }
-
-  // Prevent voting for yourself
-  if (user.id === votedFor) {
-    return res.status(400).json({ error: "You cannot vote for yourself" })
-  }
-
-  // Initialize votes if not exists
-  if (!debate.votes) {
-    debate.votes = {}
-  }
-
-  // Initialize userVotes if not exists
-  if (!debate.userVotes) {
-    debate.userVotes = {}
-  }
-
-  // Check if user has already voted
-  const previousVote = debate.userVotes[user.id]
-  if (previousVote) {
-    // Remove previous vote
-    debate.votes[previousVote] = (debate.votes[previousVote] || 1) - 1
-  }
-
-  // Add new vote
-  debate.votes[votedFor] = (debate.votes[votedFor] || 0) + 1
-  debate.userVotes[user.id] = votedFor
-
-  // Save changes
-  writeDebates(debatesData)
-
-  // Trigger Pusher event for real-time updates
-  pusher.trigger(`debate-${id}`, "vote-update", {
-    votes: debate.votes,
-  })
-
-  res.json({
-    success: true,
-    votes: debate.votes,
-    userVote: votedFor,
+// Handle graceful shutdown
+process.on("SIGTERM", () => {
+  console.log("SIGTERM signal received: closing HTTP server")
+  server.close(() => {
+    console.log("HTTP server closed")
   })
 })
-
-// Get votes for a debate
-app.get("/api/debates/:id/votes", (req, res) => {
-  const { id } = req.params
-  const { email } = req.query
-
-  const debatesData = readDebates()
-  const debate = debatesData.debates.find((d) => d.id === id)
-
-  if (!debate) {
-    return res.status(404).json({ error: "Debate not found" })
-  }
-
-  // Initialize votes if not exists
-  if (!debate.votes) {
-    debate.votes = {}
-  }
-
-  // Initialize userVotes if not exists
-  if (!debate.userVotes) {
-    debate.userVotes = {}
-  }
-
-  // Get user's vote if email is provided
-  let userVote = null
-  if (email) {
-    const data = readData()
-    const user = data.users.find((u) => u.email === email)
-    if (user) {
-      userVote = debate.userVotes[user.id]
-    }
-  }
-
-  res.json({
-    success: true,
-    votes: debate.votes,
-    userVote,
-  })
-})
-
-// Fix the matchmaking functionality
-app.post("/api/matchmaking/join", (req, res) => {
-  const { email, council, topic } = req.body
-  const ip = req.clientIp
-
-  if (!email || !council) {
-    return res.status(400).json({ error: "Email and council are required" })
-  }
-
-  // Check if user is banned
-  const ban = isUserBanned(email, ip)
-  if (ban) {
-    return res.status(403).json({
-      error: "Account banned",
-      reason: ban.reason,
-      expiresAt: ban.expiresAt,
-      permanent: ban.permanent,
-    })
-  }
-
-  const data = readData()
-  const user = data.users.find((u) => u.email === email)
-
-  // If user not found, create a temporary user record
-  if (!user) {
-    console.log(`User with email ${email} not found for matchmaking, creating temporary record`)
-    const tempUser = {
-      id: crypto.randomUUID(),
-      email,
-      name: email.split("@")[0],
-      createdAt: new Date().toISOString(),
-      lastLogin: new Date().toISOString(),
-      lastIp: ip,
-      debatesJoined: 0,
-      debatesCreated: 0,
-      debatesJoinedToday: 0,
-      ipHistory: [{ ip, timestamp: new Date().toISOString() }],
-    }
-
-    data.users.push(tempUser)
-    writeData(data)
-
-    // Continue with the newly created user
-    return handleMatchmaking(tempUser, email, council, topic, ip, res)
-  }
-
-  // Update IP if needed
-  if (user.lastIp !== ip) {
-    user.lastIp = ip
-    if (!user.ipHistory) {
-      user.ipHistory = []
-    }
-    user.ipHistory.push({ ip, timestamp: new Date().toISOString() })
-    writeData(data)
-  }
-
-  // Check if user can join more debates today
-  if (!canJoinMoreDebates(user)) {
-    return res.status(403).json({
-      error: "Daily debate limit reached",
-      limit:
-        user.subscription === "free" ? 8 : user.subscription === "pro" ? 20 : user.subscription === "elite" ? 50 : 100,
-    })
-  }
-
-  return handleMatchmaking(user, email, council, topic, ip, res)
-})
-
-// Add this helper function for matchmaking
-function handleMatchmaking(user, email, council, topic, ip, res) {
-  // Add user to matchmaking queue
-  const matchmakingData = readMatchmaking()
-  const data = readData() // Make sure we have access to the latest data
-
-  // Check if user is already in queue
-  const existingQueueEntry = matchmakingData.queue.find((entry) => entry.userId === user.id || entry.email === email)
-  if (existingQueueEntry) {
-    return res.status(400).json({ error: "You are already in the matchmaking queue" })
-  }
-
-  // Add to queue
-  const queueEntry = {
-    userId: user.id,
-    email: user.email,
-    name: user.name || email.split("@")[0],
-    username: user.username || user.name || email.split("@")[0],
-    avatar: user.avatar || "/placeholder.svg",
-    council,
-    topic: topic || null,
-    joinedAt: new Date().toISOString(),
-    lastMatchAttempt: null,
-    previousMatches: user.previousMatches ? user.previousMatches.map((match) => match.userId) : [],
-  }
-
-  matchmakingData.queue.push(queueEntry)
-  writeMatchmaking(matchmakingData)
-
-  // Try to find a match
-  const match = findMatchFixed(queueEntry, matchmakingData.queue)
-
-  if (match) {
-    // Create a new debate for the matched users
-    const debateId = crypto.randomUUID()
-    const newDebate = {
-      id: debateId,
-      title: match.topic || topic || `${match.council} Debate`,
-      description: `Matched debate on ${match.council}`,
-      council: match.council,
-      topic: match.topic || topic || "Matched Debate",
-      status: "active",
-      participants: [
-        {
-          id: user.id,
-          email: user.email,
-          name: user.name || email.split("@")[0],
-          username: user.username || user.name || email.split("@")[0],
-          avatar: user.avatar || "/placeholder.svg",
-          joinedAt: new Date().toISOString(),
-        },
-        {
-          id: match.userId,
-          email: match.email,
-          name: match.name,
-          username: match.username,
-          avatar: match.avatar,
-          joinedAt: new Date().toISOString(),
-        },
-      ],
-      isMatchmade: true,
-      createdAt: new Date().toISOString(),
-      startTime: new Date().toISOString(),
-      endTime: null,
-    }
-
-    // Update debates file
-    const debatesData = readDebates()
-    debatesData.debates.push(newDebate)
-    writeDebates(debatesData)
-
-    // Update user stats for both users
-    try {
-      // Get fresh user data
-      const userData = readData()
-      const currentUser = userData.users.find((u) => u.id === user.id || u.email === user.email)
-
-      if (!currentUser) {
-        console.error(`User not found for stats update: ${user.email}`)
-      } else {
-        currentUser.debatesJoined = (currentUser.debatesJoined || 0) + 1
-        currentUser.debatesJoinedToday = (currentUser.debatesJoinedToday || 0) + 1
-        currentUser.lastDebateJoinDate = new Date().toISOString()
-
-        // Track previous matches
-        if (!currentUser.previousMatches) {
-          currentUser.previousMatches = []
-        }
-        currentUser.previousMatches.push({
-          userId: match.userId,
-          timestamp: new Date().toISOString(),
-        })
-      }
-
-      const matchedUser = userData.users.find((u) => u.id === match.userId || u.email === match.email)
-      if (!matchedUser) {
-        console.error(`Matched user not found for stats update: ${match.email}`)
-      } else {
-        matchedUser.debatesJoined = (matchedUser.debatesJoined || 0) + 1
-        matchedUser.debatesJoinedToday = (matchedUser.debatesJoinedToday || 0) + 1
-        matchedUser.lastDebateJoinDate = new Date().toISOString()
-
-        // Track previous matches
-        if (!matchedUser.previousMatches) {
-          matchedUser.previousMatches = []
-        }
-        matchedUser.previousMatches.push({
-          userId: user.id,
-          timestamp: new Date().toISOString(),
-        })
-      }
-
-      writeData(userData)
-    } catch (error) {
-      console.error("Error updating user stats:", error)
-      // Continue without failing the matchmaking process
-    }
-
-    // Remove both users from queue
-    matchmakingData.queue = matchmakingData.queue.filter(
-      (entry) => entry.userId !== user.id && entry.userId !== match.userId,
-    )
-
-    // Add to matches
-    matchmakingData.matches.push({
-      debateId,
-      users: [user.id, match.userId],
-      council: match.council,
-      topic: match.topic || topic,
-      matchedAt: new Date().toISOString(),
-    })
-
-    writeMatchmaking(matchmakingData)
-
-    // Trigger Pusher events
-    pusher.trigger(`user-${user.id}`, "match-found", { debate: newDebate })
-    pusher.trigger(`user-${match.userId}`, "match-found", { debate: newDebate })
-    pusher.trigger("debates", "debate-created", { debate: newDebate })
-
-    return res.json({
-      success: true,
-      matched: true,
-      debate: newDebate,
-    })
-  } else {
-    // No match found, user is in queue
-    return res.json({
-      success: true,
-      matched: false,
-      message: "You've been added to the matchmaking queue. We'll notify you when a match is found.",
-    })
-  }
-}
-
-// Helper function to find a match
-function findMatchFixed(user, queue) {
-  // Filter out the current user
-  const potentialMatches = queue.filter((entry) => {
-    // Don't match with self
-    if (entry.userId === user.userId) return false
-
-    // Must be same council
-    if (entry.council !== user.council) return false
-
-    // Check if users have been matched before (avoid matching with same users)
-    if (user.previousMatches && user.previousMatches.some((match) => match.userId === entry.userId)) {
-      return false
-    }
-
-    // If both users specified a topic, they should match on topic
-    if (user.topic && entry.topic && user.topic !== entry.topic) {
-      return false
-    }
-
-    return true
-  })
-
-  if (potentialMatches.length === 0) {
-    return null
-  }
-
-  // If user specified a topic, try to match with someone who wants the same topic
-  if (user.topic) {
-    const topicMatch = potentialMatches.find((entry) => entry.topic === user.topic)
-    if (topicMatch) {
-      return topicMatch
-    }
-  }
-
-  // Otherwise, match with the user who has been waiting the longest
-  potentialMatches.sort((a, b) => new Date(a.joinedAt) - new Date(b.joinedAt))
-  return potentialMatches[0]
-}
-
-// Initialize matchmaking with the Pusher instance
-if (typeof matchmaking.init === "function") {
-  matchmaking.init(pusher)
-  console.log("Successfully initialized matchmaking module with Pusher")
-} else {
-  console.log("Matchmaking module loaded but no init function found")
-}
-
-// Add these routes to your Express app
-
-// Create a new debate
-app.post("/api/debates", (req, res) => {
-  const { title, description, council, topic, email } = req.body
-
-  if (!title || !description || !council || !email) {
-    return res.status(400).json({ error: "Title, description, council, and email are required" })
-  }
-
-  // Check if council is allowed
-  if (!debateHandler.ALLOWED_COUNCILS.includes(council)) {
-    return res.status(400).json({ error: "Invalid council. Only UN councils are allowed." })
-  }
-
-  // Create debate
-  const result = debateHandler.createDebate(title, description, council, topic, email)
-
-  if (result.success) {
-    // Trigger Pusher event for real-time updates
-    if (pusher) {
-      pusher.trigger("debates", "debate-created", {
-        debate: result.debate,
-      })
-    }
-
-    res.json(result)
-  } else {
-    res.status(400).json({ error: result.error })
-  }
-})
-
-// Join a debate
-app.post("/api/debates/:id/join", (req, res) => {
-  const { id } = req.params
-  const { email } = req.body
-
-  if (!email) {
-    return res.status(400).json({ error: "Email is required" })
-  }
-
-  // Join debate
-  const result = debateHandler.joinDebate(id, email)
-
-  if (result.success) {
-    // Trigger Pusher event for real-time updates
-    if (pusher) {
-      pusher.trigger(`debate-${id}`, "user-joined", {
-        user: result.debate.participants.find((p) => p.email === email),
-      })
-    }
-
-    res.json(result)
-  } else {
-    res.status(400).json({ error: result.error })
-  }
-})
-
-// Leave a debate
-app.post("/api/debates/:id/leave", (req, res) => {
-  const { id } = req.params
-  const { email, saveToProfile } = req.body
-
-  if (!email) {
-    return res.status(400).json({ error: "Email is required" })
-  }
-
-  // Leave debate
-  const result = debateHandler.leaveDebate(id, email, saveToProfile)
-
-  if (result.success) {
-    // Trigger Pusher event for real-time updates
-    if (pusher) {
-      pusher.trigger(`debate-${id}`, "user-left", {
-        email,
-      })
-
-      // If debate status changed, notify about that too
-      const debatesData = fs.readJsonSync(path.join(__dirname, "debates.json"))
-      const debate = debatesData.debates.find((d) => d.id === id)
-
-      if (debate && (debate.status === "completed" || debate.status === "expired")) {
-        pusher.trigger(`debate-${id}`, "debate-status-update", {
-          status: debate.status,
-        })
-      }
-    }
-
-    res.json({ success: true })
-  } else {
-    res.status(400).json({ error: result.error })
-  }
-})
-
-// Save debate to profile
-app.post("/api/user/save-debate", (req, res) => {
-  const { email, debateId } = req.body
-
-  if (!email || !debateId) {
-    return res.status(400).json({ error: "Email and debateId are required" })
-  }
-
-  // Save debate to profile
-  const result = debateHandler.saveDebateToProfile(debateId, email)
-
-  if (result.success) {
-    res.json({ success: true })
-  } else {
-    res.status(400).json({ error: result.error })
-  }
-})
-
-// Send a message in a debate
-app.post("/api/debates/:id/messages", (req, res) => {
-  const { id } = req.params
-  const { email, content } = req.body
-
-  if (!email || !content) {
-    return res.status(400).json({ error: "Email and content are required" })
-  }
-
-  // Send message
-  const result = debateHandler.sendMessage(id, email, content)
-
-  if (result.success) {
-    // Trigger Pusher event for real-time updates
-    if (pusher) {
-      pusher.trigger(`debate-${id}`, "new-message", result.message)
-    }
-
-    res.json(result)
-  } else {
-    res.status(400).json({ error: result.error })
-  }
-})
-
-// Get messages for a debate
-app.get("/api/debates/:id/messages", (req, res) => {
-  const { id } = req.params
-
-  // Get messages
-  const messages = debateHandler.getMessages(id)
-
-  res.json({ messages })
-})
-
-// Get a specific debate
-app.get("/api/debates/:id", (req, res) => {
-  const { id } = req.params
-
-  // Get debate
-  const debatesData = fs.readJsonSync(path.join(__dirname, "debates.json"))
-  const debate = debatesData.debates.find((d) => d.id === id)
-
-  if (!debate) {
-    return res.status(404).json({ error: "Debate not found" })
-  }
-
-  // Check if debate has expired
-  if (debate.status === "active" && debate.expiresAt && new Date(debate.expiresAt) < new Date()) {
-    debate.status = "expired"
-    debate.endTime = new Date().toISOString()
-    fs.writeJsonSync(path.join(__dirname, "debates.json"), debatesData)
-  }
-
-  res.json({ debate })
-})
-
-// Add this new endpoint to server.js (add it near the other debate endpoints)
-
-// Get debate timer
-app.get("/api/debates/:id/timer", (req, res) => {
-  const { id } = req.params
-
-  // Get timer info
-  const timerInfo = debateHandler.getDebateTimer(id)
-
-  if (timerInfo.success) {
-    res.json(timerInfo)
-  } else {
-    res.status(404).json({ error: timerInfo.error })
-  }
-})
-
-// Update the existing debates endpoint to remove template debates
-app.get("/api/debates", (req, res) => {
-  const { status } = req.query
-  const debatesData = readDebates()
-
-  // Filter out template debates (those with IDs 1-5)
-  let filteredDebates = debatesData.debates.filter((debate) => !["1", "2", "3", "4", "5"].includes(debate.id))
-
-  if (status) {
-    filteredDebates = filteredDebates.filter((debate) => debate.status === status)
-  }
-
-  res.json({ debates: filteredDebates })
-})
-
-// Get user profile
-app.get("/api/user/profile", (req, res) => {
-  const { email } = req.query
-
-  if (!email) {
-    return res.status(400).json({ error: "Email is required" })
-  }
-
-  // Get user
-  const user = debateHandler.getUser(email)
-
-  if (!user) {
-    return res.status(404).json({ error: "User not found" })
-  }
-
-  // Return user profile data (excluding sensitive information)
-  res.json({
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    username: user.username,
-    avatar: user.avatar,
-    createdAt: user.createdAt,
-    lastLogin: user.lastLogin,
-    debatesJoined: user.debatesJoined,
-    debatesCreated: user.debatesCreated,
-    activeDebateId: user.activeDebateId,
-    debateHistory: user.debateHistory || [],
-  })
-})
-
-// Update user profile
-app.post("/api/user/update", (req, res) => {
-  const { email, username, name, avatar } = req.body
-
-  if (!email) {
-    return res.status(400).json({ error: "Email is required" })
-  }
-
-  // Get user
-  let user = debateHandler.getUser(email)
-
-  if (!user) {
-    // Create user if not found
-    user = debateHandler.getOrCreateUser(email, name, username, avatar)
-  } else {
-    // Update user
-    if (username) user.username = username
-    if (name) user.name = name
-    if (avatar) user.avatar = avatar
-
-    debateHandler.updateUser(user)
-  }
-
-  res.json({
-    success: true,
-    username: user.username,
-    name: user.name,
-    avatar: user.avatar,
-  })
-})
-
-// Get user debate history
-app.get("/api/user/debate-history", (req, res) => {
-  const { email } = req.query
-
-  if (!email) {
-    return res.status(400).json({ error: "Email is required" })
-  }
-
-  // Get user
-  const user = debateHandler.getUser(email)
-
-  if (!user) {
-    return res.status(404).json({ error: "User not found" })
-  }
-
-  res.json({
-    debateHistory: user.debateHistory || [],
-  })

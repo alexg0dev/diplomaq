@@ -1647,7 +1647,7 @@
              if (data.timerStarted) {
                // Timer has started, use the remaining time from server
                timeLeft = data.timeRemaining;
-               startTimer(timeLeft);
+               startTimer(timeLeft, data.startTime); // Pass startTime to startTimer
              } else {
                // Timer hasn't started yet (waiting for second participant)
                timeLeft = seconds;
@@ -1661,7 +1661,7 @@
                      if (newData.success && newData.timerStarted) {
                        // Timer has started, clear check interval and start the timer
                        clearInterval(checkTimerInterval);
-                       startTimer(newData.timeRemaining);
+                       startTimer(newData.timeRemaining, newData.startTime); // Pass startTime to startTimer
                      }
                    })
                    .catch(error => console.error('Error checking timer status:', error));
@@ -1672,17 +1672,22 @@
              }
            } else {
              // Fallback to local timer if server fails
-             startTimer(seconds);
+             startTimer(seconds, null); // Pass null startTime
            }
          })
          .catch(error => {
            console.error('Error getting timer status:', error);
            // Fallback to local timer if server fails
-           startTimer(seconds);
+           startTimer(seconds, null); // Pass null startTime
          });
        
-       function startTimer(duration) {
+       function startTimer(duration, startTime) {
          let timeLeft = duration;
+         if (startTime) {
+           const now = Date.now();
+           const elapsedSeconds = Math.floor((now - new Date(startTime).getTime()) / 1000);
+           timeLeft = Math.max(0, duration - elapsedSeconds);
+         }
          updateTimerDisplay(timeLeft);
          
          // Start timer
@@ -1944,6 +1949,7 @@
        // Clear any existing refresh interval
        if (window.messageRefreshInterval) {
          clearInterval(window.messageRefreshInterval);
+         window.messageRefreshInterval = null;
        }
        
        // Set up new refresh interval (every 4 seconds)

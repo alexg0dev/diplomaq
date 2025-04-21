@@ -155,7 +155,11 @@ function createDebate(title, description, council, topic, email) {
   const user = getUser(email)
 
   if (!user) {
-    return { success: false, error: "User not found" }
+    // Create user if not found
+    const user = getOrCreateUser(email, null, null, null)
+    if (!user) {
+      return { success: false, error: "Failed to create user" }
+    }
   }
 
   // Check if user is already in a debate
@@ -193,6 +197,8 @@ function createDebate(title, description, council, topic, email) {
     startTime: now,
     endTime: null,
     expiresAt: new Date(Date.now() + MAX_DEBATE_DURATION * 1000).toISOString(),
+    timerStarted: false, // Add flag to track if timer has started
+    timerStartTime: null, // Add timestamp for when timer started
   }
 
   // Update debates file
@@ -213,11 +219,16 @@ function joinDebate(debateId, email) {
   const user = getUser(email)
 
   if (!user) {
-    return { success: false, error: "User not found" }
+    // Create user if not found
+    const newUser = getOrCreateUser(email, null, null, null)
+    if (!newUser) {
+      return { success: false, error: "Failed to create user" }
+    }
+    return joinDebate(debateId, email) // Retry with the new user
   }
 
   // Check if user is already in a debate
-  if (user.activeDebateId) {
+  if (user.activeDebateId && user.activeDebateId !== debateId) {
     return {
       success: false,
       error: "You are already in an active debate. Please leave your current debate before joining a new one.",
@@ -262,6 +273,12 @@ function joinDebate(debateId, email) {
     avatar: user.avatar,
     joinedAt: new Date().toISOString(),
   })
+
+  // If this is the second participant, start the timer
+  if (debate.participants.length === 2 && !debate.timerStarted) {
+    debate.timerStarted = true
+    debate.timerStartTime = new Date().toISOString()
+  }
 
   // Update debates file
   writeDebates(debatesData)
@@ -410,6 +427,11 @@ function sendMessage(debateId, email, content) {
     return { success: false, error: "This debate has expired" }
   }
 
+  // Check if there are at least 2 participants
+  if (debate.participants.length < 2) {
+    return { success: false, error: "You need at least 2 participants to start messaging" }
+  }
+
   // Create message
   const messageId = crypto.randomUUID()
   const newMessage = {
@@ -441,12 +463,65 @@ function getMessages(debateId) {
   return messagesData.messages.filter((m) => m.debateId === debateId)
 }
 
+function getDebateTimer(debateId) {
+  const debatesData = readDebates()
+  const debate = debatesData.debates.find((d) => d.id === debateId)
+
+  if (!debate) {
+    return { success: false, error: "Debate not found" }
+  }
+
+  // If timer hasn't started yet (less than 2 participants)
+  if (!debate.timerStarted || !debate.timerStartTime) {
+    return {
+      success: true,
+      timerStarted: false,
+      timeRemaining: MAX_DEBATE_DURATION,
+    }
+  }
+
+  // Calculate remaining time
+  const startTime = new Date(debate.timerStartTime).getTime()
+  const now = Date.now()
+  const elapsedSeconds = Math.floor((now - startTime) / 1000)
+  const remainingSeconds = Math.max(0, MAX_DEBATE_DURATION - elapsedSeconds)
+
+  return {
+    success: true,
+    timerStarted: true,
+    timeRemaining: remainingSeconds,
+    startTime: debate.timerStartTime,
+  }
+}
+
 function checkDebateExpiry() {
   const debatesData = readDebates()
   let updated = false
 
   debatesData.debates.forEach((debate) => {
-    if (debate.status === "active" && debate.expiresAt && new Date(debate.expiresAt) < new Date()) {
+    // If timer has started, check based on timer start time
+    if (debate.status === "active" && debate.timerStarted && debate.timerStartTime) {
+      const startTime = new Date(debate.timerStartTime).getTime()
+      const now = Date.now()
+      const elapsedSeconds = Math.floor((now - startTime) / 1000)
+
+      if (elapsedSeconds >= MAX_DEBATE_DURATION) {
+        debate.status = "expired"
+        debate.endTime = new Date().toISOString()
+        updated = true
+
+        // Notify users that the debate has expired
+        debate.participants.forEach((participant) => {
+          const user = getUser(participant.email)
+          if (user && user.activeDebateId === debate.id) {
+            user.activeDebateId = null
+            updateUser(user)
+          }
+        })
+      }
+    }
+    // Also check the old way for backwards compatibility
+    else if (debate.status === "active" && debate.expiresAt && new Date(debate.expiresAt) < new Date()) {
       debate.status = "expired"
       debate.endTime = new Date().toISOString()
       updated = true
@@ -481,6 +556,7 @@ module.exports = {
   saveDebateToProfile,
   sendMessage,
   getMessages,
+  getDebateTimer,
   checkDebateExpiry,
   ALLOWED_COUNCILS,
   MAX_DEBATE_DURATION,

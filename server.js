@@ -2848,15 +2848,35 @@ app.get("/api/debates/:id", (req, res) => {
   res.json({ debate })
 })
 
-// Get all debates
+// Add this new endpoint to server.js (add it near the other debate endpoints)
+
+// Get debate timer
+app.get("/api/debates/:id/timer", (req, res) => {
+  const { id } = req.params
+
+  // Get timer info
+  const timerInfo = debateHandler.getDebateTimer(id)
+
+  if (timerInfo.success) {
+    res.json(timerInfo)
+  } else {
+    res.status(404).json({ error: timerInfo.error })
+  }
+})
+
+// Update the existing debates endpoint to remove template debates
 app.get("/api/debates", (req, res) => {
-  // Get debates
-  const debatesData = fs.readJsonSync(path.join(__dirname, "debates.json"))
+  const { status } = req.query
+  const debatesData = readDebates()
 
-  // Check for expired debates
-  debateHandler.checkDebateExpiry()
+  // Filter out template debates (those with IDs 1-5)
+  let filteredDebates = debatesData.debates.filter((debate) => !["1", "2", "3", "4", "5"].includes(debate.id))
 
-  res.json({ debates: debatesData.debates })
+  if (status) {
+    filteredDebates = filteredDebates.filter((debate) => debate.status === status)
+  }
+
+  res.json({ debates: filteredDebates })
 })
 
 // Get user profile
@@ -2939,4 +2959,3 @@ app.get("/api/user/debate-history", (req, res) => {
   res.json({
     debateHistory: user.debateHistory || [],
   })
-})

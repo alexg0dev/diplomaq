@@ -19,6 +19,9 @@ dotenv.config()
 // Import and initialize matchmaking module
 const matchmaking = require("./matchmaking.js")
 
+// Add this near the top of the file with other requires
+const debateHandler = require("./debate-handler")
+
 // Initialize express app
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -2676,3 +2679,264 @@ if (typeof matchmaking.init === "function") {
 } else {
   console.log("Matchmaking module loaded but no init function found")
 }
+
+// Add these routes to your Express app
+
+// Create a new debate
+app.post("/api/debates", (req, res) => {
+  const { title, description, council, topic, email } = req.body
+
+  if (!title || !description || !council || !email) {
+    return res.status(400).json({ error: "Title, description, council, and email are required" })
+  }
+
+  // Check if council is allowed
+  if (!debateHandler.ALLOWED_COUNCILS.includes(council)) {
+    return res.status(400).json({ error: "Invalid council. Only UN councils are allowed." })
+  }
+
+  // Create debate
+  const result = debateHandler.createDebate(title, description, council, topic, email)
+
+  if (result.success) {
+    // Trigger Pusher event for real-time updates
+    if (pusher) {
+      pusher.trigger("debates", "debate-created", {
+        debate: result.debate,
+      })
+    }
+
+    res.json(result)
+  } else {
+    res.status(400).json({ error: result.error })
+  }
+})
+
+// Join a debate
+app.post("/api/debates/:id/join", (req, res) => {
+  const { id } = req.params
+  const { email } = req.body
+
+  if (!email) {
+    return res.status(400).json({ error: "Email is required" })
+  }
+
+  // Join debate
+  const result = debateHandler.joinDebate(id, email)
+
+  if (result.success) {
+    // Trigger Pusher event for real-time updates
+    if (pusher) {
+      pusher.trigger(`debate-${id}`, "user-joined", {
+        user: result.debate.participants.find((p) => p.email === email),
+      })
+    }
+
+    res.json(result)
+  } else {
+    res.status(400).json({ error: result.error })
+  }
+})
+
+// Leave a debate
+app.post("/api/debates/:id/leave", (req, res) => {
+  const { id } = req.params
+  const { email, saveToProfile } = req.body
+
+  if (!email) {
+    return res.status(400).json({ error: "Email is required" })
+  }
+
+  // Leave debate
+  const result = debateHandler.leaveDebate(id, email, saveToProfile)
+
+  if (result.success) {
+    // Trigger Pusher event for real-time updates
+    if (pusher) {
+      pusher.trigger(`debate-${id}`, "user-left", {
+        email,
+      })
+
+      // If debate status changed, notify about that too
+      const debatesData = fs.readJsonSync(path.join(__dirname, "debates.json"))
+      const debate = debatesData.debates.find((d) => d.id === id)
+
+      if (debate && (debate.status === "completed" || debate.status === "expired")) {
+        pusher.trigger(`debate-${id}`, "debate-status-update", {
+          status: debate.status,
+        })
+      }
+    }
+
+    res.json({ success: true })
+  } else {
+    res.status(400).json({ error: result.error })
+  }
+})
+
+// Save debate to profile
+app.post("/api/user/save-debate", (req, res) => {
+  const { email, debateId } = req.body
+
+  if (!email || !debateId) {
+    return res.status(400).json({ error: "Email and debateId are required" })
+  }
+
+  // Save debate to profile
+  const result = debateHandler.saveDebateToProfile(debateId, email)
+
+  if (result.success) {
+    res.json({ success: true })
+  } else {
+    res.status(400).json({ error: result.error })
+  }
+})
+
+// Send a message in a debate
+app.post("/api/debates/:id/messages", (req, res) => {
+  const { id } = req.params
+  const { email, content } = req.body
+
+  if (!email || !content) {
+    return res.status(400).json({ error: "Email and content are required" })
+  }
+
+  // Send message
+  const result = debateHandler.sendMessage(id, email, content)
+
+  if (result.success) {
+    // Trigger Pusher event for real-time updates
+    if (pusher) {
+      pusher.trigger(`debate-${id}`, "new-message", result.message)
+    }
+
+    res.json(result)
+  } else {
+    res.status(400).json({ error: result.error })
+  }
+})
+
+// Get messages for a debate
+app.get("/api/debates/:id/messages", (req, res) => {
+  const { id } = req.params
+
+  // Get messages
+  const messages = debateHandler.getMessages(id)
+
+  res.json({ messages })
+})
+
+// Get a specific debate
+app.get("/api/debates/:id", (req, res) => {
+  const { id } = req.params
+
+  // Get debate
+  const debatesData = fs.readJsonSync(path.join(__dirname, "debates.json"))
+  const debate = debatesData.debates.find((d) => d.id === id)
+
+  if (!debate) {
+    return res.status(404).json({ error: "Debate not found" })
+  }
+
+  // Check if debate has expired
+  if (debate.status === "active" && debate.expiresAt && new Date(debate.expiresAt) < new Date()) {
+    debate.status = "expired"
+    debate.endTime = new Date().toISOString()
+    fs.writeJsonSync(path.join(__dirname, "debates.json"), debatesData)
+  }
+
+  res.json({ debate })
+})
+
+// Get all debates
+app.get("/api/debates", (req, res) => {
+  // Get debates
+  const debatesData = fs.readJsonSync(path.join(__dirname, "debates.json"))
+
+  // Check for expired debates
+  debateHandler.checkDebateExpiry()
+
+  res.json({ debates: debatesData.debates })
+})
+
+// Get user profile
+app.get("/api/user/profile", (req, res) => {
+  const { email } = req.query
+
+  if (!email) {
+    return res.status(400).json({ error: "Email is required" })
+  }
+
+  // Get user
+  const user = debateHandler.getUser(email)
+
+  if (!user) {
+    return res.status(404).json({ error: "User not found" })
+  }
+
+  // Return user profile data (excluding sensitive information)
+  res.json({
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    username: user.username,
+    avatar: user.avatar,
+    createdAt: user.createdAt,
+    lastLogin: user.lastLogin,
+    debatesJoined: user.debatesJoined,
+    debatesCreated: user.debatesCreated,
+    activeDebateId: user.activeDebateId,
+    debateHistory: user.debateHistory || [],
+  })
+})
+
+// Update user profile
+app.post("/api/user/update", (req, res) => {
+  const { email, username, name, avatar } = req.body
+
+  if (!email) {
+    return res.status(400).json({ error: "Email is required" })
+  }
+
+  // Get user
+  let user = debateHandler.getUser(email)
+
+  if (!user) {
+    // Create user if not found
+    user = debateHandler.getOrCreateUser(email, name, username, avatar)
+  } else {
+    // Update user
+    if (username) user.username = username
+    if (name) user.name = name
+    if (avatar) user.avatar = avatar
+
+    debateHandler.updateUser(user)
+  }
+
+  res.json({
+    success: true,
+    username: user.username,
+    name: user.name,
+    avatar: user.avatar,
+  })
+})
+
+// Get user debate history
+app.get("/api/user/debate-history", (req, res) => {
+  const { email } = req.query
+
+  if (!email) {
+    return res.status(400).json({ error: "Email is required" })
+  }
+
+  // Get user
+  const user = debateHandler.getUser(email)
+
+  if (!user) {
+    return res.status(404).json({ error: "User not found" })
+  }
+
+  res.json({
+    debateHistory: user.debateHistory || [],
+  })
+})

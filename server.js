@@ -735,7 +735,9 @@ app.get("/api/auth/callback/google", async (req, res) => {
     }
   } catch (error) {
     console.error("Google callback error:", error)
-    res.redirect(`${FRONTEND_URL}/signin.html?error=auth_error&message=${encodeURIComponent(error.message)}`)
+    res.redirect(
+      `${FRONTEND_URL}/signin.html?error=auth_error&message=${encodeURIComponent(error.message || "Authentication failed")}`,
+    )
   }
 })
 
@@ -1103,21 +1105,458 @@ app.post("/api/matchmaking/leave", (req, res) => {
 
 // Debate endpoints
 app.get("/api/debates", (req, res) => {
-  const debatesData = readDebates()
-  res.json(debatesData.debates)
+  try {
+    const debatesData = readDebates()
+    res.json(debatesData.debates)
+  } catch (error) {
+    console.error("Error fetching debates:", error)
+    res.status(500).json({ error: "Failed to fetch debates" })
+  }
 })
 
 app.get("/api/debates/:id", (req, res) => {
-  const { id } = req.params
-  const debatesData = readDebates()
-  const debate = debatesData.debates.find((debate) => debate.id === id)
+  try {
+    const { id } = req.params
+    const debatesData = readDebates()
+    const debate = debatesData.debates.find((debate) => debate.id === id)
 
-  if (debate) {
-    res.json(debate)
-  } else {
-    res.status(404).json({ error: "Debate not found" })
+    if (debate) {
+      res.json({ success: true, debate })
+    } else {
+      res.status(404).json({ success: false, error: "Debate not found" })
+    }
+  } catch (error) {
+    console.error("Error fetching debate:", error)
+    res.status(500).json({ success: false, error: "Failed to fetch debate" })
   }
 })
+
+// Add routes for debate messages
+// Add these routes before the "Start the server" line:
+
+// Debate messages endpoints
+app.get("/api/debates/:id/messages", (req, res) => {
+  try {
+    const { id } = req.params
+    const messagesData = readMessages()
+    const messages = messagesData.messages.filter((message) => message.debateId === id)
+
+    res.json({ success: true, messages })
+  } catch (error) {
+    console.error("Error fetching messages:", error)
+    res.status(500).json({ success: false, error: "Failed to fetch messages" })
+  }
+})
+
+app.post("/api/debates/:id/messages", (req, res) => {
+  try {
+    const { id } = req.params
+    const { email, content } = req.body
+
+    if (!email || !content) {
+      return res.status(400).json({ success: false, error: "Email and content are required" })
+    }
+
+    // Get user
+    const userData = readData()
+    const user = userData.users.find((u) => u.email === email)
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: "User not found" })
+    }
+
+    // Get debate
+    const debatesData = readDebates()
+    const debate = debatesData.debates.find((d) => d.id === id)
+
+    if (!debate) {
+      return res.status(404).json({ success: false, error: "Debate not found" })
+    }
+
+    // Check if debate is active
+    if (debate.status !== "active") {
+      return res.status(400).json({ success: false, error: "This debate is not currently active" })
+    }
+
+    // Check if user is a participant
+    if (!debate.participants.some((p) => p.email === email)) {
+      return res.status(403).json({ success: false, error: "You are not a participant in this debate" })
+    }
+
+    // Check if there are at least 2 participants
+    if (debate.participants.length < 2) {
+      return res.status(400).json({ success: false, error: "You need at least 2 participants to start messaging" })
+    }
+
+    // Create message
+    const messageId = crypto.randomUUID()
+    const newMessage = {
+      id: messageId,
+      debateId: id,
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      username: user.username,
+      avatar: user.avatar,
+      content,
+      timestamp: new Date().toISOString(),
+    }
+
+    // Add message to messages file
+    const messagesData = readMessages()
+    messagesData.messages.push(newMessage)
+    writeMessages(messagesData)
+
+    // Trigger Pusher event if available
+    if (pusher) {
+      try {
+        pusher.trigger(`debate-${id}`, "new-message", newMessage)
+      } catch (error) {
+        console.error("Error triggering Pusher event:", error)
+      }
+    }
+
+    res.json({ success: true, message: newMessage })
+  } catch (error) {
+    console.error("Error sending message:", error)
+    res.status(500).json({ success: false, error: "Failed to send message" })
+  }
+})
+
+// Debate timer endpoint
+app.get("/api/debates/:id/timer", (req, res) => {
+  try {
+    const { id } = req.params
+    const debatesData = readDebates()
+    const debate = debatesData.debates.find((d) => d.id === id)
+
+    if (!debate) {
+      return res.status(404).json({ success: false, error: "Debate not found" })
+    }
+
+    // If timer hasn't started yet (less than 2 participants)
+    if (!debate.timerStarted || !debate.timerStartTime) {
+      return res.json({
+        success: true,
+        timerStarted: false,
+        timeRemaining: 35 * 60, // 35 minutes in seconds
+      })
+    }
+
+    // Calculate remaining time
+    const startTime = new Date(debate.timerStartTime).getTime()
+    const now = Date.now()
+    const elapsedSeconds = Math.floor((now - startTime) / 1000)
+    const remainingSeconds = Math.max(0, 35 * 60 - elapsedSeconds)
+
+    return res.json({
+      success: true,
+      timerStarted: true,
+      timeRemaining: remainingSeconds,
+      startTime: debate.timerStartTime,
+    })
+  } catch (error) {
+    console.error("Error getting timer status:", error)
+    res.status(500).json({ success: false, error: "Failed to get timer status" })
+  }
+})
+
+// Access verification endpoint
+app.get("/api/access/verify", (req, res) => {
+  const { email, feature } = req.query
+
+  if (!email) {
+    return res.status(400).json({ success: false, error: "Email is required" })
+  }
+
+  // Get user
+  const userData = readData()
+  const user = userData.users.find((u) => u.email === email)
+
+  if (!user) {
+    return res.status(404).json({ success: false, error: "User not found" })
+  }
+
+  // Check if user has access to the feature
+  let hasAccess = false
+
+  if (feature === "debate-ai") {
+    // AI features are available to Pro, Elite, and Institutional subscribers
+    hasAccess = ["pro", "elite", "institutional"].includes(user.subscription)
+  }
+
+  res.json({ success: true, hasAccess })
+})
+
+// Save debate to profile
+app.post("/api/debates/:id/save", (req, res) => {
+  try {
+    const { id } = req.params
+    const { email } = req.body
+
+    if (!email) {
+      return res.status(400).json({ success: false, error: "Email is required" })
+    }
+
+    // Get user
+    const userData = readData()
+    const user = userData.users.find((u) => u.email === email)
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: "User not found" })
+    }
+
+    // Get debate
+    const debatesData = readDebates()
+    const debate = debatesData.debates.find((d) => d.id === id)
+
+    if (!debate) {
+      return res.status(404).json({ success: false, error: "Debate not found" })
+    }
+
+    // Check if debate is already in user's history
+    if (user.debateHistory && user.debateHistory.some((d) => d.debateId === id)) {
+      return res.status(400).json({ success: false, error: "Debate already saved to profile" })
+    }
+
+    // Add to user's debate history
+    if (!user.debateHistory) {
+      user.debateHistory = []
+    }
+
+    const userParticipant = debate.participants.find((p) => p.email === email)
+
+    user.debateHistory.push({
+      debateId: id,
+      title: debate.title,
+      council: debate.council,
+      topic: debate.topic,
+      joinedAt: userParticipant?.joinedAt || debate.startTime,
+      leftAt: new Date().toISOString(),
+    })
+
+    // Update user data
+    const userIndex = userData.users.findIndex((u) => u.email === email)
+    if (userIndex !== -1) {
+      userData.users[userIndex] = user
+      writeData(userData)
+    }
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error("Error saving debate to profile:", error)
+    res.status(500).json({ success: false, error: "Failed to save debate to profile" })
+  }
+})
+
+// Debate voting endpoint
+app.post("/api/debates/:id/vote", (req, res) => {
+  try {
+    const { id } = req.params
+    const { email, votedFor } = req.body
+
+    if (!email || !votedFor) {
+      return res.status(400).json({ success: false, error: "Email and votedFor are required" })
+    }
+
+    // Get debate
+    const debatesData = readDebates()
+    const debate = debatesData.debates.find((d) => d.id === id)
+
+    if (!debate) {
+      return res.status(404).json({ success: false, error: "Debate not found" })
+    }
+
+    // Check if debate is completed or expired
+    if (debate.status !== "completed" && debate.status !== "expired") {
+      return res.status(400).json({ success: false, error: "Voting is only allowed for completed or expired debates" })
+    }
+
+    // Check if user is a participant
+    if (!debate.participants.some((p) => p.email === email)) {
+      return res.status(403).json({ success: false, error: "You are not a participant in this debate" })
+    }
+
+    // Check if user has already voted
+    if (debate.userVotes && debate.userVotes[email]) {
+      return res.status(400).json({ success: false, error: "You have already voted in this debate" })
+    }
+
+    // Initialize votes if not exists
+    if (!debate.votes) {
+      debate.votes = {}
+    }
+
+    // Initialize userVotes if not exists
+    if (!debate.userVotes) {
+      debate.userVotes = {}
+    }
+
+    // Add vote
+    debate.votes[votedFor] = (debate.votes[votedFor] || 0) + 1
+    debate.userVotes[email] = votedFor
+
+    // Update debates file
+    writeDebates(debatesData)
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error("Error processing vote:", error)
+    res.status(500).json({ success: false, error: "Failed to process vote" })
+  }
+})
+
+// Add AI assistance endpoint
+app.post("/api/debates/:id/ai-message", (req, res) => {
+  try {
+    const { id } = req.params
+    const { email, prompt } = req.body
+
+    if (!email || !prompt) {
+      return res.status(400).json({ success: false, error: "Email and prompt are required" })
+    }
+
+    // Get user
+    const userData = readData()
+    const user = userData.users.find((u) => u.email === email)
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: "User not found" })
+    }
+
+    // Check if user has access to AI features
+    if (!["pro", "elite", "institutional"].includes(user.subscription)) {
+      return res
+        .status(403)
+        .json({ success: false, error: "AI assistance requires a Pro, Elite, or Institutional subscription" })
+    }
+
+    // Get debate
+    const debatesData = readDebates()
+    const debate = debatesData.debates.find((d) => d.id === id)
+
+    if (!debate) {
+      return res.status(404).json({ success: false, error: "Debate not found" })
+    }
+
+    // Check if user is a participant
+    if (!debate.participants.some((p) => p.email === email)) {
+      return res.status(403).json({ success: false, error: "You are not a participant in this debate" })
+    }
+
+    // Generate AI response based on prompt and debate context
+    const aiResponse = generateAIResponse(prompt, debate.topic, debate.council)
+
+    // Create AI message (but don't save it to the messages file)
+    const messageId = crypto.randomUUID()
+    const aiMessage = {
+      id: messageId,
+      debateId: id,
+      userId: "ai-assistant",
+      email: "ai@diplomaq.lol",
+      name: "AI Diplomat",
+      username: "ai_diplomat",
+      avatar: "/images/ai-avatar.png",
+      content: aiResponse,
+      isAI: true,
+      timestamp: new Date().toISOString(),
+    }
+
+    res.json({ success: true, message: aiMessage })
+  } catch (error) {
+    console.error("Error generating AI message:", error)
+    res.status(500).json({ success: false, error: "Failed to generate AI message" })
+  }
+})
+
+// Helper function to generate AI responses
+function generateAIResponse(prompt, topic, council) {
+  // Simple AI response generation based on prompt, topic, and council
+  // In a real implementation, this would use a more sophisticated AI model
+
+  const topicResponses = {
+    "Climate Change": [
+      "The scientific consensus on climate change is clear. We must take immediate action to reduce carbon emissions and transition to renewable energy sources.",
+      "Developing nations require financial and technological support to adapt to climate change while pursuing sustainable development.",
+      "A global carbon pricing mechanism could create the economic incentives needed to drive meaningful climate action across all sectors.",
+    ],
+    "Nuclear Disarmament": [
+      "Nuclear disarmament must be pursued through a step-by-step approach that ensures strategic stability at each stage.",
+      "The Non-Proliferation Treaty remains the cornerstone of global nuclear governance, but we must strengthen its verification mechanisms.",
+      "Regional nuclear-weapon-free zones have proven effective and should be expanded to other regions facing nuclear tensions.",
+    ],
+    "Human Rights": [
+      "Human rights are universal, indivisible, and inalienable. They apply to all persons regardless of nationality, race, religion, or any other status.",
+      "Economic development and human rights protection are mutually reinforcing goals that must be pursued simultaneously.",
+      "International human rights mechanisms must be strengthened to ensure accountability for violations wherever they occur.",
+    ],
+  }
+
+  const councilResponses = {
+    UNSC: [
+      "As a Security Council matter, this issue directly impacts international peace and security.",
+      "The Security Council must consider both immediate crisis response and long-term stability measures.",
+      "Any resolution must balance sovereignty concerns with the Council's responsibility to maintain international peace.",
+    ],
+    UNGA: [
+      "The General Assembly's universal membership makes it the ideal forum for building global consensus on this issue.",
+      "While General Assembly resolutions are non-binding, they carry significant moral and political weight.",
+      "This issue requires the broad-based approach that only the General Assembly can provide.",
+    ],
+    UNHRC: [
+      "Human rights considerations must be central to our approach on this issue.",
+      "The Human Rights Council should establish a special rapporteur to monitor and report on this situation.",
+      "We must ensure that vulnerable populations are protected and their voices heard in this process.",
+    ],
+    ECOSOC: [
+      "Economic and social factors are key drivers that must be addressed for a sustainable solution.",
+      "ECOSOC's multi-stakeholder approach is essential for addressing the complex dimensions of this issue.",
+      "Development considerations must be integrated into our policy response.",
+    ],
+  }
+
+  // Select responses based on topic and council
+  let possibleResponses = []
+
+  // Add topic-specific responses if available
+  for (const key in topicResponses) {
+    if (topic && topic.toLowerCase().includes(key.toLowerCase())) {
+      possibleResponses = possibleResponses.concat(topicResponses[key])
+      break
+    }
+  }
+
+  // Add council-specific responses if available
+  if (councilResponses[council]) {
+    possibleResponses = possibleResponses.concat(councilResponses[council])
+  }
+
+  // Add generic diplomatic responses if no specific ones are available
+  if (possibleResponses.length === 0) {
+    possibleResponses = [
+      "Based on diplomatic principles and international norms, I would approach this issue with careful consideration of all stakeholders' interests.",
+      "A balanced approach that considers both immediate concerns and long-term implications would be most effective here.",
+      "International cooperation and multilateral engagement are essential for addressing this complex issue effectively.",
+      "We must ensure that any solution respects sovereignty while promoting collective action for the common good.",
+      "Evidence-based policymaking should guide our approach to this issue, drawing on best practices and lessons learned.",
+    ]
+  }
+
+  // Select a random response
+  const randomResponse = possibleResponses[Math.floor(Math.random() * possibleResponses.length)]
+
+  // Add a prefix that acknowledges the prompt
+  const prefixes = [
+    `Regarding your question about ${prompt.substring(0, 30)}..., `,
+    `In response to your inquiry on ${prompt.substring(0, 30)}..., `,
+    `Considering your point about ${prompt.substring(0, 30)}..., `,
+    `Addressing your concern on ${prompt.substring(0, 30)}..., `,
+  ]
+
+  const randomPrefix = prefixes[Math.floor(Math.random() * prefixes.length)]
+
+  return randomPrefix + randomResponse
+}
 
 // Start the server
 app.listen(PORT, () => {

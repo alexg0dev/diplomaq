@@ -1263,834 +1263,218 @@
      }
      
      // Functions
-     function loadDebates() {
-       const debatesList = document.getElementById('debates-list');
-       
-       // Get filter values
-       const topicFilter = document.getElementById('topic-filter').value.toLowerCase();
-       const councilFilter = document.getElementById('council-filter').value;
-       
-       // Show loading spinner
-       debatesList.innerHTML = `
-         <div class="flex justify-center items-center col-span-full py-12">
-           <div class="spinner"></div>
-         </div>
-       `;
-       
-       // Fetch debates
-       fetch('/api/debates')
+     const MESSAGE_COOLDOWN = 2000; // 2 seconds between messages
+     let lastMessageTime = 0;
+
+     function containsCurseWords(text) {
+       // Simple implementation - in a real app, you'd have a more comprehensive list
+       const curseWords = ['fuck', 'shit', 'ass', 'bitch', 'damn'];
+       const lowerText = text.toLowerCase();
+       return curseWords.some(word => lowerText.includes(word));
+     }
+
+     function showError(message) {
+       const errorAlert = document.getElementById('error-alert');
+       const errorMessage = document.getElementById('error-message');
+
+       errorMessage.textContent = message;
+       errorAlert.classList.remove('hidden');
+
+       // Auto-hide after 5 seconds
+       setTimeout(() => {
+         errorAlert.classList.add('hidden');
+       }, 5000);
+
+       // Set up dismiss button
+       document.getElementById('error-dismiss').onclick = function() {
+         errorAlert.classList.add('hidden');
+       };
+     }
+
+     function setupPusher(debateId) {
+       try {
+         // Initialize Pusher
+         const pusher = new Pusher('6a59bdd1f5df05fd2554', {
+           cluster: 'eu'
+         });
+
+         // Subscribe to debate channel
+         const channel = pusher.subscribe(`debate-${debateId}`);
+
+         // Listen for new messages
+         channel.bind('new-message', function(data) {
+           const chatContainer = document.getElementById('debate-chat-container');
+
+           // Check if message already exists
+           if (document.querySelector(`[data-message-id="${data.id}"]`)) {
+             return;
+           }
+
+           const isCurrentUser = data.email === userEmail;
+           const messageClass = isCurrentUser ? 'user' : data.isAI ? 'ai' : 'other';
+
+           const messageElement = document.createElement('div');
+           messageElement.className = `chat-message ${messageClass}`;
+           messageElement.setAttribute('data-message-id', data.id);
+           messageElement.innerHTML = `
+             <div class="flex items-center mb-1">
+               <img src="${data.avatar || '/placeholder.svg'}" alt="${data.name || 'User'}" class="w-5 h-5 rounded-full mr-2">
+               <span class="text-xs font-medium">${data.username || data.name || data.email}</span>
+               ${data.isAI ? '<span class="ml-1 text-xs bg-purple-100 text-purple-800 px-1 rounded">AI</span>' : ''}
+             </div>
+             <p>${data.content}</p>
+           `;
+      
+           chatContainer.appendChild(messageElement);
+      
+           // Scroll to bottom
+           chatContainer.scrollTop = chatContainer.scrollHeight;
+      
+           // Remove typing indicator if exists
+           const typingIndicator = document.getElementById(`typing-${data.userId}`);
+           if (typingIndicator) {
+             typingIndicator.remove();
+           }
+         });
+    
+         // Store Pusher instance for later use
+         window.pusherInstance = pusher;
+    
+         return pusher;
+       } catch (error) {
+         console.error('Error setting up Pusher:', error);
+         return null;
+       }
+     }
+
+     function checkAIAccess() {
+       // Check if user has access to AI features
+       fetch(`/api/access/verify?email=${encodeURIComponent(userEmail)}&feature=debate-ai`)
          .then(res => res.json())
          .then(data => {
-           // Filter debates
-           let filteredDebates = data.debates;
-           
-           if (councilFilter !== 'all') {
-             filteredDebates = filteredDebates.filter(debate => debate.council === councilFilter);
+           if (data.hasAccess) {
+             document.getElementById('ai-assist-section').classList.remove('hidden');
+        
+             // Set up AI assist button
+             document.getElementById('ai-assist-btn').onclick = function() {
+               document.getElementById('ai-assist-modal').classList.add('active');
+             };
            }
-           
-           if (topicFilter) {
-             filteredDebates = filteredDebates.filter(debate => 
-               debate.title.toLowerCase().includes(topicFilter) || 
-               debate.description.toLowerCase().includes ||
-               debate.description.toLowerCase().includes(topicFilter) ||
-               (debate.topic && debate.topic.toLowerCase().includes(topicFilter))
-             );
-           }
-           
-           // Render debates
-           if (filteredDebates.length > 0) {
-             debatesList.innerHTML = filteredDebates.map(debate => {
-               // Calculate status badge
-               let statusBadge = '';
-               if (debate.status === 'active') {
-                 statusBadge = '<span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>';
-               } else if (debate.status === 'completed') {
-                 statusBadge = '<span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">Completed</span>';
-               } else if (debate.status === 'expired') {
-                 statusBadge = '<span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Expired</span>';
-               }
-               
-               return `
-                 <div class="debate-card bg-white rounded-xl shadow-md overflow-hidden">
-                   <div class="p-6">
-                     <div class="flex justify-between items-start mb-2">
-                       <h3 class="text-xl font-bold text-[#1f1d79]">${debate.title}</h3>
-                       ${statusBadge}
-                     </div>
-                     <p class="text-gray-600 mb-4">${debate.description}</p>
-                     <div class="flex items-center justify-between mb-2">
-                       <span class="text-sm font-medium text-[#1f1d79]">${debate.council}</span>
-                       <span class="text-sm text-gray-500">${debate.participants ? debate.participants.length : 0} participants</span>
-                     </div>
-                     <div class="mb-4">
-                       <span class="text-sm text-gray-500">Topic: ${debate.topic || 'General'}</span>
-                     </div>
-                     <button class="view-debate-btn w-full py-2 border border-[#1f1d79] text-[#1f1d79] font-medium rounded-md hover:bg-[#1f1d79] hover:text-white transition" data-debate-id="${debate.id}">View Debate</button>
-                   </div>
-                 </div>
-               `;
-             }).join('');
-             
-             // Add event listeners to view debate buttons
-             document.querySelectorAll('.view-debate-btn').forEach(btn => {
-               btn.addEventListener('click', function() {
-                 const debateId = this.getAttribute('data-debate-id');
-                 const debate = filteredDebates.find(d => d.id === debateId);
-                 
-                 if (debate) {
-                   openDebateView(debate);
-                 }
-               });
-             });
+         })
+         .catch(error => console.error('Error checking AI access:', error));
+     }
+
+     function saveDebateToProfile(debateId) {
+       fetch(`/api/debates/${debateId}/save`, {
+         method: 'POST',
+         headers: {
+           'Content-Type': 'application/json'
+         },
+         body: JSON.stringify({
+           email: userEmail
+         })
+       })
+         .then(res => res.json())
+         .then(data => {
+           if (data.success) {
+             alert('Debate saved to your profile successfully.');
+             document.getElementById('save-debate-section').classList.add('hidden');
            } else {
-             debatesList.innerHTML = `
-               <div class="col-span-full text-center py-12">
-                 <p class="text-gray-500 mb-4">No debates found matching your filters.</p>
-                 <button id="create-first-debate-btn" class="px-6 py-3 gradient-button text-white font-semibold rounded-md">Create Your First Debate</button>
-               </div>
-             `;
-             
-             document.getElementById('create-first-debate-btn').addEventListener('click', function() {
-               if (!userToken || !userEmail) {
-                 alert('Please sign in to create a debate.');
-                 window.location.href = 'signin.html';
-                 return;
-               }
-               
-               createDebateModal.classList.add('active');
-             });
+             alert('Error: ' + (data.error || 'Failed to save debate'));
            }
          })
          .catch(error => {
-           console.error('Error loading debates:', error);
-           
-           debatesList.innerHTML = `
-             <div class="col-span-full text-center py-12">
-               <p class="text-red-500 mb-4">Error loading debates. Please try again later.</p>
-               <button id="retry-load-debates-btn" class="px-6 py-3 border border-[#1f1d79] text-[#1f1d79] font-semibold rounded-md hover:bg-[#1f1d79] hover:text-white transition">Retry</button>
-             </div>
-           `;
-           
-           document.getElementById('retry-load-debates-btn').addEventListener('click', loadDebates);
+           console.error('Error saving debate:', error);
+           alert('An error occurred. Please try again later.');
          });
      }
-     
-     // Track if user is already in a debate
-     let userInDebate = false;
-     
-     function openDebateView(debate) {
-       // Check if user is already in another debate
-       if (userInDebate && !debate.participants.some(p => p.email === userEmail)) {
-         showError("You are already participating in another debate. Please leave that debate before joining a new one.");
+
+     function setupVotingSection(debate) {
+       // Only show voting for completed or expired debates
+       if (debate.status !== 'completed' && debate.status !== 'expired') {
+         document.getElementById('debate-voting-section').classList.add('hidden');
          return;
        }
-       
-       // Set debate details
-       document.getElementById('debate-view-title').textContent = debate.title;
-       document.getElementById('debate-view-description').textContent = debate.description;
-       document.getElementById('debate-view-council').textContent = debate.council;
-       document.getElementById('debate-view-topic').textContent = debate.topic || 'General';
-       
-       // Set debate ID
-       debateViewModal.setAttribute('data-debate-id', debate.id);
-       
-       // Set debate status
-       const statusBadge = document.getElementById('debate-view-status');
-       if (debate.status === 'active') {
-         statusBadge.textContent = 'Active';
-         statusBadge.className = 'ml-2 status-badge active';
-       } else if (debate.status === 'completed') {
-         statusBadge.textContent = 'Completed';
-         statusBadge.className = 'ml-2 status-badge completed';
-       } else if (debate.status === 'expired') {
-         statusBadge.textContent = 'Expired';
-         statusBadge.className = 'ml-2 status-badge expired';
-       }
-       
-       // Initialize debate timer (35 minutes)
-       initDebateTimer(35 * 60);
-       
-       // Render participants
-       const participantsContainer = document.getElementById('debate-view-participants');
-       
-       if (debate.participants && debate.participants.length > 0) {
-         participantsContainer.innerHTML = debate.participants.map(participant => {
-           return `
-             <div class="flex items-center space-x-2 bg-gray-100 rounded-full px-3 py-1">
-               <img src="${participant.avatar || '/placeholder.svg'}" alt="${participant.name}" class="w-6 h-6 rounded-full">
-               <span class="text-sm font-medium">${participant.username || participant.name}</span>
-             </div>
-           `;
-         }).join('');
-       } else {
-         participantsContainer.innerHTML = `<p class="text-gray-500">No participants yet.</p>`;
-       }
-       
-       // Check if user is already a participant
-       const isParticipant = userEmail && debate.participants && debate.participants.some(p => p.email === userEmail);
-       
-       if (isParticipant) {
-         // User is a participant, show chat section
-         document.getElementById('debate-join-section').classList.add('hidden');
-         document.getElementById('debate-chat-section').classList.remove('hidden');
-         
-         // Set userInDebate flag
-         userInDebate = true;
-         
-         // Load chat messages
-         loadChatMessages(debate.id);
-         
-         // Set up chat form
-         setupChatForm(debate.id);
-         
-         // Check if user has access to AI features
-         checkAIAccess();
-         
-         // Show voting section if there are at least 2 participants
-         if (debate.participants.length >= 2) {
-           setupVotingSection(debate);
-         }
-         
-         // Set up leave debate button
-         document.getElementById('leave-debate-btn').onclick = function() {
-           leaveDebateConfirmModal.classList.add('active');
-           
-           // Set up confirm leave button
-           document.getElementById('confirm-leave-btn').onclick = function() {
-             leaveDebate(debate.id, false);
-           };
-           
-           // Set up save and leave button
-           document.getElementById('save-and-leave-btn').onclick = function() {
-             leaveDebate(debate.id, true);
-           };
-         };
-       } else {
-         // User is not a participant, show join button
-         document.getElementById('debate-join-section').classList.remove('hidden');
-         document.getElementById('debate-chat-section').classList.add('hidden');
-         document.getElementById('debate-voting-section').classList.add('hidden');
-         
-         // Set up join button
-         const joinDebateBtn = document.getElementById('join-debate-btn');
-         
-         joinDebateBtn.onclick = function() {
-           if (!userToken || !userEmail) {
-             alert('Please sign in to join this debate.');
-             window.location.href = 'signin.html';
-             return;
-           }
-           
-           // Check if user is already in another debate
-           if (userInDebate) {
-             showError("You are already participating in another debate. Please leave that debate before joining a new one.");
-             return;
-           }
-           
-           // Disable button
-           joinDebateBtn.disabled = true;
-           joinDebateBtn.innerHTML = '<span class="spinner inline-block mr-2"></span> Joining...';
-           
-           // Join debate
-           fetch(`/api/debates/${debate.id}/join`, {
+  
+       const votingOptions = document.getElementById('voting-options');
+       votingOptions.innerHTML = '';
+  
+       // Add voting options for each participant
+       debate.participants.forEach(participant => {
+         // Don't add voting option for current user
+         if (participant.email === userEmail) return;
+    
+         const option = document.createElement('div');
+         option.className = 'bg-white p-4 rounded-lg border border-gray-200 shadow-sm';
+         option.innerHTML = `
+           <div class="flex items-center mb-2">
+             <img src="${participant.avatar || '/placeholder.svg'}" alt="${participant.name}" class="w-8 h-8 rounded-full mr-2">
+             <span class="font-medium">${participant.username || participant.name}</span>
+           </div>
+           <button class="vote-button w-full py-2 border border-[#1f1d79] text-[#1f1d79] font-medium rounded-md hover:bg-[#1f1d79] hover:text-white transition" data-user-id="${participant.id}">
+             Vote for this participant
+           </button>
+           <div class="mt-2 text-center">
+             <span class="vote-count text-sm" data-user-id="${participant.id}">0</span> votes
+           </div>
+         `;
+    
+         votingOptions.appendChild(option);
+       });
+  
+       // Add event listeners to vote buttons
+       document.querySelectorAll('.vote-button').forEach(btn => {
+         btn.addEventListener('click', function() {
+           const userId = this.getAttribute('data-user-id');
+      
+           // Vote for user
+           fetch(`/api/debates/${debate.id}/vote`, {
              method: 'POST',
              headers: {
                'Content-Type': 'application/json'
              },
              body: JSON.stringify({
-               email: userEmail
+               email: userEmail,
+               votedFor: userId
              })
            })
-           .then(res => res.json())
-           .then(data => {
-             if (data.success) {
-               // Show chat section
-               document.getElementById('debate-join-section').classList.add('hidden');
-               document.getElementById('debate-chat-section').classList.remove('hidden');
-               
-               // Set userInDebate flag
-               userInDebate = true;
-               
-               // Update participants
-               if (!debate.participants) {
-                 debate.participants = [];
-               }
-               
-               debate.participants.push({
-                 email: userEmail,
-                 name: userName || userEmail,
-                 username: userUsername,
-                 avatar: userAvatar
-               });
-               
-               // Re-render participants
-               participantsContainer.innerHTML = debate.participants.map(participant => {
-                 return `
-                   <div class="flex items-center space-x-2 bg-gray-100 rounded-full px-3 py-1">
-                     <img src="${participant.avatar || '/placeholder.svg'}" alt="${participant.name}" class="w-6 h-6 rounded-full">
-                     <span class="text-sm font-medium">${participant.username || participant.name}</span>
-                   </div>
-                 `;
-               }).join('');
-               
-               // Load chat messages
-               loadChatMessages(debate.id);
-               
-               // Set up chat form
-               setupChatForm(debate.id);
-               
-               // Check if user has access to AI features
-               checkAIAccess();
-               
-               // Show voting section if there are at least 2 participants
-               if (debate.participants.length >= 2) {
-                 setupVotingSection(debate);
-               }
-               
-               // Set up leave debate button
-               document.getElementById('leave-debate-btn').onclick = function() {
-                 leaveDebateConfirmModal.classList.add('active');
-                 
-                 // Set up confirm leave button
-                 document.getElementById('confirm-leave-btn').onclick = function() {
-                   leaveDebate(debate.id, false);
-                 };
-                 
-                 // Set up save and leave button
-                 document.getElementById('save-and-leave-btn').onclick = function() {
-                   leaveDebate(debate.id, true);
-                 };
-               };
-             } else {
-               alert('Error: ' + (data.error || 'Failed to join debate'));
-               
-               // Re-enable button
-               joinDebateBtn.disabled = false;
-               joinDebateBtn.innerHTML = 'Join Debate';
-             }
-           })
-           .catch(error => {
-             console.error('Error joining debate:', error);
-             alert('An error occurred. Please try again later.');
-             
-             // Re-enable button
-             joinDebateBtn.disabled = false;
-             joinDebateBtn.innerHTML = 'Join Debate';
-           });
-         };
-       }
-       
-       // Show modal
-       debateViewModal.classList.add('active');
-     }
-     
-     // Function to leave a debate
-     function leaveDebate(debateId, saveToProfile) {
-       fetch(`/api/debates/${debateId}/leave`, {
-         method: 'POST',
-         headers: {
-           'Content-Type': 'application/json'
-         },
-         body: JSON.stringify({
-           email: userEmail,
-           saveToProfile: saveToProfile
-         })
-       })
-       .then(res => res.json())
-       .then(data => {
-         if (data.success) {
-           // Reset userInDebate flag
-           userInDebate = false;
-           
-           // Close modals
-           leaveDebateConfirmModal.classList.remove('active');
-           debateViewModal.classList.remove('active');
-           
-           // Clean up resources
-           cleanupDebateResources();
-           
-           // Reload debates
-           loadDebates();
-           
-           if (saveToProfile) {
-             alert('Debate saved to your profile and left successfully.');
-           } else {
-             alert('You have left the debate.');
-           }
-         } else {
-           alert('Error: ' + (data.error || 'Failed to leave debate'));
-         }
-       })
-       .catch(error => {
-         console.error('Error leaving debate:', error);
-         alert('An error occurred. Please try again later.');
-       });
-     }
-     
-     // Initialize debate timer
-     function initDebateTimer(seconds) {
-       // Clear any existing timer
-       if (window.debateTimer) {
-         clearInterval(window.debateTimer);
-       }
-       
-       const debateId = document.getElementById('debate-view-modal').getAttribute('data-debate-id');
-       const timerElement = document.getElementById('debate-timer');
-       
-       // First, get the timer status from the server
-       fetch(`/api/debates/${debateId}/timer`)
-         .then(res => res.json())
-         .then(data => {
-           if (data.success) {
-             let timeLeft;
-             
-             if (data.timerStarted) {
-               // Timer has started, use the remaining time from server
-               timeLeft = data.timeRemaining;
-               startTimer(timeLeft, data.startTime); // Pass startTime to startTimer
-             } else {
-               // Timer hasn't started yet (waiting for second participant)
-               timeLeft = seconds;
-               timerElement.textContent = formatTime(timeLeft);
-               
-               // Check periodically if timer has started
-               const checkTimerInterval = setInterval(() => {
-                 fetch(`/api/debates/${debateId}/timer`)
-                   .then(res => res.json())
-                   .then(newData => {
-                     if (newData.success && newData.timerStarted) {
-                       // Timer has started, clear check interval and start the timer
-                       clearInterval(checkTimerInterval);
-                       startTimer(newData.timeRemaining, newData.startTime); // Pass startTime to startTimer
-                     }
-                   })
-                   .catch(error => console.error('Error checking timer status:', error));
-               }, 5000); // Check every 5 seconds
-               
-               // Store the check interval so we can clear it if needed
-               window.timerCheckInterval = checkTimerInterval;
-             }
-           } else {
-             // Fallback to local timer if server fails
-             startTimer(seconds, null); // Pass null startTime
-           }
-         })
-         .catch(error => {
-           console.error('Error getting timer status:', error);
-           // Fallback to local timer if server fails
-           startTimer(seconds, null); // Pass null startTime
-         });
-       
-       function startTimer(duration, startTime) {
-         let timeLeft = duration;
-         if (startTime) {
-           const now = Date.now();
-           const elapsedSeconds = Math.floor((now - new Date(startTime).getTime()) / 1000);
-           timeLeft = Math.max(0, duration - elapsedSeconds);
-         }
-         updateTimerDisplay(timeLeft);
-         
-         // Start timer
-         window.debateTimer = setInterval(() => {
-           timeLeft--;
-           updateTimerDisplay(timeLeft);
-           
-           // End debate when timer reaches 0
-           if (timeLeft <= 0) {
-             clearInterval(window.debateTimer);
-             
-             // Update status
-             const statusBadge = document.getElementById('debate-view-status');
-             statusBadge.textContent = 'Expired';
-             statusBadge.className = 'ml-2 status-badge expired';
-             
-             // Show save debate option
-             document.getElementById('save-debate-section').classList.remove('hidden');
-             
-             // Set up save debate button
-             document.getElementById('save-debate-btn').onclick = function() {
-               const debateId = document.getElementById('debate-view-modal').getAttribute('data-debate-id');
-               saveDebateToProfile(debateId);
-             };
-             
-             alert('The debate has ended. You can save it to your profile.');
-           }
-         }, 1000);
-       }
-       
-       function updateTimerDisplay(seconds) {
-         const minutes = Math.floor(seconds / 60);
-         const secs = seconds % 60;
-         timerElement.textContent = `${minutes}:${secs.toString().padStart(2, '0')}`;
-         
-         // Add warning class when less than 5 minutes
-         if (seconds <= 300 && seconds > 60) {
-           timerElement.classList.add('warning');
-           timerElement.classList.remove('danger');
-         }
-         // Add danger class when less than 1 minute
-         else if (seconds <= 60) {
-           timerElement.classList.add('danger');
-           timerElement.classList.remove('warning');
-         }
-         else {
-           timerElement.classList.remove('warning', 'danger');
-         }
-       }
-       
-       function formatTime(seconds) {
-         const minutes = Math.floor(seconds / 60);
-         const secs = seconds % 60;
-         return `${minutes}:${secs.toString().padStart(2, '0')}`;
-       }
-     }
-     
-     function setupChatForm(debateId) {
-       const chatForm = document.getElementById('chat-form');
-       const chatInput = document.getElementById('chat-input');
-       const sendButton = chatForm.querySelector('button[type="submit"]');
-       
-       // Reset form
-       chatForm.reset();
-       
-       // Check if there are at least 2 participants
-       fetch(`/api/debates/${debateId}`)
-         .then(res => res.json())
-         .then(data => {
-           if (data.debate && data.debate.participants && data.debate.participants.length < 2) {
-             // Disable chat form until second participant joins
-             chatInput.disabled = true;
-             sendButton.disabled = true;
-             chatInput.placeholder = "Waiting for another participant to join...";
-             
-             // Check periodically for second participant
-             const participantCheckInterval = setInterval(() => {
-               fetch(`/api/debates/${debateId}`)
-                 .then(res => res.json())
-                 .then(newData => {
-                   if (newData.debate && newData.debate.participants && newData.debate.participants.length >= 2) {
-                     // Enable chat form when second participant joins
-                     chatInput.disabled = false;
-                     sendButton.disabled = false;
-                     chatInput.placeholder = "Type your message...";
-                     clearInterval(participantCheckInterval);
+             .then(res => res.json())
+             .then(data => {
+               if (data.success) {
+                 // Update vote count
+                 const voteCount = document.querySelector(`.vote-count[data-user-id="${userId}"]`);
+                 voteCount.textContent = parseInt(voteCount.textContent) + 1;
+          
+                 // Highlight vote count
+                 voteCount.classList.add('highlight');
+                 setTimeout(() => {
+                   voteCount.classList.remove('highlight');
+                 }, 1000);
+          
+                 // Mark button as voted
+                 this.classList.add('voted');
+                 this.textContent = 'Voted';
+                 this.disabled = true;
+          
+                 // Disable other vote buttons
+                 document.querySelectorAll('.vote-button').forEach(otherBtn => {
+                   if (otherBtn !== this) {
+                     otherBtn.disabled = true;
                    }
-                 })
-                 .catch(error => console.error('Error checking participants:', error));
-             }, 5000); // Check every 5 seconds
-           }
-         })
-         .catch(error => console.error('Error checking participants:', error));
-       
-       // Add typing indicator when user starts typing
-       let typingTimeout;
-       chatInput.addEventListener('input', function() {
-         clearTimeout(typingTimeout);
-         
-         // Only send typing indicator if there's text
-         if (chatInput.value.trim().length > 0) {
-           // Send typing indicator via Pusher
-           if (pusherInstance) {
-             try {
-               pusherInstance.trigger(`debate-${debateId}`, "user-typing", {
-                 userId: localStorage.getItem('userId') || userEmail,
-                 username: userUsername || userName || userEmail
-               });
-             } catch (error) {
-               console.error('Error sending typing indicator:', error);
-             }
-           }
-         }
-         
-         // Clear typing indicator after 2 seconds of no typing
-         typingTimeout = setTimeout(() => {
-           // Could send a "stopped typing" event here
-         }, 2000);
-       });
-       
-       // Set up form submission
-       chatForm.onsubmit = function(e) {
-         e.preventDefault();
-         
-         const content = chatInput.value.trim();
-         
-         if (!content) return;
-         
-         // Check for spam
-         const now = Date.now();
-         if (now - lastMessageTime < MESSAGE_COOLDOWN) {
-           showError("Please wait a moment before sending another message.");
-           return;
-         }
-         
-         // Update last message time
-         lastMessageTime = now;
-         
-         // Check for curse words
-         if (containsCurseWords(content)) {
-           showError("Please avoid using inappropriate language in your messages.");
-           return;
-         }
-         
-         // Clear input
-         chatInput.value = '';
-         
-         // Create a temporary message element to show immediately
-         const chatContainer = document.getElementById('debate-chat-container');
-         const tempMessage = document.createElement('div');
-         tempMessage.className = 'chat-message user';
-         tempMessage.innerHTML = `
-           <div class="flex items-center mb-1">
-             <img src="${userAvatar || '/placeholder.svg'}" alt="${userName || userEmail}" class="w-5 h-5 rounded-full mr-2">
-             <span class="text-xs font-medium">${userUsername || userName || userEmail}</span>
-           </div>
-           <p>${content}</p>
-         `;
-         chatContainer.appendChild(tempMessage);
-         chatContainer.scrollTop = chatContainer.scrollHeight;
-         
-         // Send message
-         fetch(`/api/debates/${debateId}/messages`, {
-           method: 'POST',
-           headers: {
-             'Content-Type': 'application/json'
-           },
-           body: JSON.stringify({
-             email: userEmail,
-             content
-           })
-         })
-         .then(res => res.json())
-         .then(data => {
-           if (!data.success) {
-             console.error('Error sending message:', data.error || 'Failed to send message');
-             if (data.error === "You need at least 2 participants to start messaging") {
-               showError("Waiting for another participant to join before you can send messages.");
-             }
-           }
-         })
-         .catch(error => {
-           console.error('Error sending message:', error);
-         });
-       };
-     }
-     
-     function loadChatMessages(debateId) {
-       const chatContainer = document.getElementById('debate-chat-container');
-       
-       // Add a mutation observer to automatically scroll to the bottom when new messages are added
-       const observer = new MutationObserver(function(mutations) {
-         chatContainer.scrollTop = chatContainer.scrollHeight;
-       });
-       
-       observer.observe(chatContainer, { childList: true });
-       
-       // Show loading indicator
-       chatContainer.innerHTML = `
-         <div class="flex justify-center items-center py-4">
-           <div class="spinner"></div>
-         </div>
-       `;
-       
-       // Fetch messages
-       fetch(`/api/debates/${debateId}/messages`)
-         .then(res => res.json())
-         .then(data => {
-           if (data.messages && data.messages.length > 0) {
-             chatContainer.innerHTML = '';
-             
-             // Render messages
-             data.messages.forEach(message => {
-               const isCurrentUser = message.email === userEmail;
-               const messageClass = isCurrentUser ? 'user' : message.isAI ? 'ai' : 'other';
-               
-               const messageElement = document.createElement('div');
-               messageElement.className = `chat-message ${messageClass}`;
-               messageElement.innerHTML = `
-                 <div class="flex items-center mb-1">
-                   <img src="${message.avatar || '/placeholder.svg'}" alt="${message.name || 'User'}" class="w-5 h-5 rounded-full mr-2">
-                   <span class="text-xs font-medium">${message.username || message.name || message.email}</span>
-                   ${message.isAI ? '<span class="ml-1 text-xs bg-purple-100 text-purple-800 px-1 rounded">AI</span>' : ''}
-                 </div>
-                 <p>${message.content}</p>
-               `;
-               
-               chatContainer.appendChild(messageElement);
+                 });
+               } else {
+                 alert('Error: ' + (data.error || 'Failed to vote'));
+               }
+             })
+             .catch(error => {
+               console.error('Error voting:', error);
+               alert('An error occurred. Please try again later.');
              });
-             
-             // Scroll to bottom
-             chatContainer.scrollTop = chatContainer.scrollHeight;
-           } else {
-             chatContainer.innerHTML = `
-               <div class="text-center text-gray-500 py-4">
-                 No messages yet. Be the first to contribute to this debate!
-               </div>
-             `;
-           }
-           
-           // Set up Pusher for real-time updates
-           setupPusher(debateId);
-           
-           // Set up auto-refresh for messages
-           startMessageRefresh(debateId);
-         })
-         .catch(error => {
-           console.error('Error loading messages:', error);
-           chatContainer.innerHTML = `
-             <div class="text-center text-red-500 py-4">
-               Error loading messages. Please try again later.
-               <button class="block mx-auto mt-2 px-4 py-2 border border-red-500 text-red-500 rounded-md hover:bg-red-500 hover:text-white transition" onclick="loadChatMessages('${debateId}')">Retry</button>
-             </div>
-           `;
          });
-     }
-     
-     function startMessageRefresh(debateId) {
-       // Clear any existing refresh interval
-       if (window.messageRefreshInterval) {
-         clearInterval(window.messageRefreshInterval);
-         window.messageRefreshInterval = null;
-       }
-       
-       // Set up new refresh interval (every 4 seconds)
-       window.messageRefreshInterval = setInterval(() => {
-         fetch(`/api/debates/${debateId}/messages`)
-           .then(res => res.json())
-           .then(data => {
-             if (data.messages && data.messages.length > 0) {
-               const chatContainer = document.getElementById('debate-chat-container');
-               
-               // Get existing message IDs
-               const existingMessageIds = Array.from(chatContainer.querySelectorAll('.chat-message'))
-                 .map(el => el.getAttribute('data-message-id'))
-                 .filter(id => id); // Filter out null/undefined
-               
-               // Add only new messages
-               data.messages.forEach(message => {
-                 if (!existingMessageIds.includes(message.id)) {
-                   const isCurrentUser = message.email === userEmail;
-                   const messageClass = isCurrentUser ? 'user' : message.isAI ? 'ai' : 'other';
-                   
-                   const messageElement = document.createElement('div');
-                   messageElement.className = `chat-message ${messageClass}`;
-                   messageElement.setAttribute('data-message-id', message.id);
-                   messageElement.innerHTML = `
-                     <div class="flex items-center mb-1">
-                       <img src="${message.avatar || '/placeholder.svg'}" alt="${message.name || 'User'}" class="w-5 h-5 rounded-full mr-2">
-                       <span class="text-xs font-medium">${message.username || message.name || message.email}</span>
-                       ${message.isAI ? '<span class="ml-1 text-xs bg-purple-100 text-purple-800 px-1 rounded">AI</span>' : ''}
-                     </div>
-                     <p>${message.content}</p>
-                   `;
-                   
-                   chatContainer.appendChild(messageElement);
-                   
-                   // Scroll to bottom
-                   chatContainer.scrollTop = chatContainer.scrollHeight;
-                 }
-               });
-             }
-           })
-           .catch(error => console.error('Error refreshing messages:', error));
-       }, 4000); // Refresh every 4 seconds
-     }
-     
-     function cleanupDebateResources() {
-       // Clear message refresh interval
-       if (window.messageRefreshInterval) {
-         clearInterval(window.messageRefreshInterval);
-         window.messageRefreshInterval = null;
-       }
-       
-       // Clear timer check interval
-       if (window.timerCheckInterval) {
-         clearInterval(window.timerCheckInterval);
-         window.timerCheckInterval = null;
-       }
-       
-       // Clear debate timer
-       if (window.debateTimer) {
-         clearInterval(window.debateTimer);
-         window.debateTimer = null;
-       }
-     }
-     
-     function leaveDebate(debateId, saveToProfile) {
-       fetch(`/api/debates/${debateId}/leave`, {
-         method: 'POST',
-         headers: {
-           'Content-Type': 'application/json'
-         },
-         body: JSON.stringify({
-           email: userEmail,
-           saveToProfile: saveToProfile
-         })
-       })
-       .then(res => res.json())
-       .then(data => {
-         if (data.success) {
-           // Reset userInDebate flag
-           userInDebate = false;
-           
-           // Close modals
-           leaveDebateConfirmModal.classList.remove('active');
-           debateViewModal.classList.remove('active');
-           
-           // Clean up resources
-           cleanupDebateResources();
-           
-           // Reload debates
-           loadDebates();
-           
-           if (saveToProfile) {
-             alert('Debate saved to your profile and left successfully.');
-           } else {
-             alert('You have left the debate.');
-           }
-         } else {
-           alert('Error: ' + (data.error || 'Failed to leave debate'));
-         }
-       })
-       .catch(error => {
-         console.error('Error leaving debate:', error);
-         alert('An error occurred. Please try again later.');
        });
-     }
-     
-     // Listen for typing indicators
-     if (pusherInstance) {
-       const debateId = document.getElementById('debate-view-modal').getAttribute('data-debate-id');
-       if (debateId) {
-         const channel = pusherInstance.subscribe(`debate-${debateId}`);
-         channel.bind('user-typing', function(data) {
-           // Don't show typing indicator for current user
-           if (data.userId !== localStorage.getItem('userId')) {
-             showTypingIndicator(data.userId, data.username);
-           }
-         });
-       }
-     }
-     
-     // Function to show typing indicator
-     function showTypingIndicator(userId, username) {
-       const chatContainer = document.getElementById('debate-chat-container');
-       
-       // Check if typing indicator already exists
-       if (document.getElementById(`typing-${userId}`)) return;
-       
-       const typingIndicator = document.createElement('div');
-       typingIndicator.id = `typing-${userId}`;
-       typingIndicator.className = 'typing-indicator text-xs text-gray-500 italic mb-2';
-       typingIndicator.innerHTML = `${username} is typing<span>.</span><span>.</span><span>.</span>`;
-       
-       chatContainer.appendChild(typingIndicator);
-       chatContainer.scrollTop = chatContainer.scrollHeight;
-       
-       // Remove after 3 seconds if no message is sent
-       setTimeout(() => {
-         const indicator = document.getElementById(`typing-${userId}`);
-         if (indicator) indicator.remove();
-       }, 3000);
+  
+       // Show voting section
+       document.getElementById('debate-voting-section').classList.remove('hidden');
      }
    });
  </script>
